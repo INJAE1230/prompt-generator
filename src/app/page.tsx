@@ -410,7 +410,7 @@ export default function Home() {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
                           <polygon points="5 3 19 12 5 21 5 3"/>
                         </svg>
-                        <span className="mono tracking-[0.2em] font-semibold">GENERATE</span>
+                        <span className="tracking-wider font-bold">GENERATE</span>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-40">
                           <polyline points="9 18 15 12 9 6"/>
                         </svg>
@@ -545,8 +545,9 @@ export default function Home() {
           background: var(--bg-input);
           color: var(--text-dim);
           transition: all 0.15s;
+          border: 1px solid var(--border-inner);
         }
-        .model-btn-inactive:hover { color: var(--text-secondary); }
+        .model-btn-inactive:hover { color: var(--text-secondary); border-color: var(--border-hover); }
 
         .purpose-btn {
           position: relative;
@@ -557,7 +558,7 @@ export default function Home() {
           background: var(--bg-input);
           color: var(--text-secondary);
           transition: all 0.15s;
-          border: 1px solid transparent;
+          border: 1px solid var(--border-inner);
         }
         .purpose-btn:hover { color: var(--text); border-color: var(--border-hover); }
         .purpose-btn:active { transform: scale(0.97); }
@@ -575,8 +576,11 @@ export default function Home() {
           font-size: 15px;
           color: var(--text);
           resize: none;
-          border: 1px solid var(--border);
+          border: 1px solid var(--border-inner);
           transition: border-color 0.2s;
+        }
+        [data-theme="light"] .input-area {
+          border-color: var(--border);
         }
         .input-area::placeholder { color: var(--text-dim); }
         .input-area:focus { border-color: var(--border-accent); }
@@ -631,7 +635,10 @@ export default function Home() {
           background: var(--bg-input);
           border-radius: 10px;
           padding: 16px;
-          border: 1px solid var(--border);
+          border: 1px solid var(--border-inner);
+        }
+        [data-theme="light"] .result-box {
+          border-color: var(--border);
         }
 
         .btn-sm {

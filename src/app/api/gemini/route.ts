@@ -23,6 +23,12 @@ export async function POST(req: NextRequest) {
   );
 
   const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '응답 없음';
+  console.log('Gemini API response:', JSON.stringify(data, null, 2));
+
+  if (!data.candidates) {
+    return NextResponse.json({ result: JSON.stringify(data, null, 2) });
+  }
+
+  const text = data.candidates[0]?.content?.parts?.[0]?.text || '응답 없음';
   return NextResponse.json({ result: text });
 }

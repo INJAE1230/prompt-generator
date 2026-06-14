@@ -205,10 +205,10 @@ export default function Home() {
                   <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+                  <h1 className="text-base font-semibold tracking-tight" style={{ color: "var(--text)" }}>
                     Prompt Generator
                   </h1>
-                  <p className="mono text-[9px] tracking-widest" style={{ color: "var(--text-dim)" }}>
+                  <p className="mono text-[10px] tracking-widest" style={{ color: "var(--text-dim)" }}>
                     AI-POWERED · v1.0
                   </p>
                 </div>
@@ -327,7 +327,7 @@ export default function Home() {
                     <button
                       key={m.key}
                       onClick={() => { setModel(m.key); setCompareMode(false); }}
-                      className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                      className={`flex-1 py-3 rounded-lg text-base font-medium transition-all flex items-center justify-center gap-2 ${
                         model === m.key && !compareMode
                           ? `bg-${m.color}-500/15 text-${m.color}-400 ring-1 ring-${m.color}-500/30`
                           : "model-btn-inactive"
@@ -339,7 +339,7 @@ export default function Home() {
                   ))}
                   <button
                     onClick={() => setCompareMode(!compareMode)}
-                    className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    className={`px-5 py-3 rounded-lg text-base font-medium transition-all flex items-center justify-center gap-2 ${
                       compareMode ? "bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30" : "model-btn-inactive"
                     }`}
                   >
@@ -361,7 +361,7 @@ export default function Home() {
                       className={`purpose-btn ${selectedPurpose === p.id ? "purpose-btn-active" : ""}`}
                     >
                       <span className="text-base mr-1.5">{p.emoji}</span>
-                      <span className="text-[13px]">{p.label}</span>
+                      <span className="text-[15px]">{p.label}</span>
                       {selectedPurpose === p.id && <span className="absolute top-1.5 right-2 text-xs" style={{ color: "var(--accent)" }}>✓</span>}
                     </button>
                   ))}
@@ -425,7 +425,7 @@ export default function Home() {
                     <span className="text-xs" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
                   </div>
                   <div className="result-box">
-                    <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                    <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
                       <TypeWriter text={result} />
                     </div>
                   </div>
@@ -445,7 +445,7 @@ export default function Home() {
                         <span className={`mono text-[10px] px-2 py-0.5 rounded font-medium bg-${m.color}-500/15 text-${m.color}-400`}>{m.label}</span>
                       </div>
                       <div className="result-box max-h-80 overflow-y-auto">
-                        <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                        <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
                           <TypeWriter text={compareResult[m.key]} />
                         </div>
                       </div>
@@ -503,7 +503,7 @@ export default function Home() {
 
         .label {
           display: block;
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 600;
           color: var(--text-dim);
           text-transform: uppercase;
@@ -511,8 +511,8 @@ export default function Home() {
         }
 
         .tab-btn {
-          padding: 6px 12px;
-          font-size: 13px;
+          padding: 6px 14px;
+          font-size: 14px;
           border-radius: 8px;
           color: var(--text-dim);
           transition: all 0.15s;
@@ -531,10 +531,10 @@ export default function Home() {
 
         .purpose-btn {
           position: relative;
-          padding: 10px 12px;
+          padding: 12px 14px;
           border-radius: 10px;
           text-align: left;
-          font-size: 13px;
+          font-size: 15px;
           background: var(--bg-input);
           color: var(--text-secondary);
           transition: all 0.15s;
@@ -551,8 +551,8 @@ export default function Home() {
           width: 100%;
           background: var(--bg-input);
           border-radius: 10px;
-          padding: 12px 16px 12px 28px;
-          font-size: 14px;
+          padding: 14px 18px 14px 30px;
+          font-size: 15px;
           color: var(--text);
           resize: none;
           border: 1px solid var(--border);
@@ -566,7 +566,7 @@ export default function Home() {
           padding: 14px;
           border-radius: 12px;
           font-weight: 600;
-          font-size: 14px;
+          font-size: 16px;
           color: var(--accent);
           background: var(--bg-input);
           border: 1px solid var(--border-accent);
@@ -590,8 +590,8 @@ export default function Home() {
         }
 
         .btn-sm {
-          padding: 5px 12px;
-          font-size: 12px;
+          padding: 6px 14px;
+          font-size: 13px;
           border-radius: 8px;
           border: 1px solid var(--border);
           color: var(--text-secondary);

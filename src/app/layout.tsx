@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI 프롬프트 생성기",
-  description: "목적에 맞는 최적화된 AI 프롬프트를 생성합니다",
+  title: "AI_PROMPT_GENERATOR v1.0",
+  description: "AI 프롬프트 생성기 - Terminal Edition",
 };
 
 export default function RootLayout({

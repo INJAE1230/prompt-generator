@@ -197,18 +197,18 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40" />
             </div>
 
-            <div className="h-14 flex items-center justify-between">
+            <div className="h-16 flex items-center justify-between">
               {/* Left: Logo */}
               <div className="flex items-center gap-3">
-                <div className="relative w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
-                  <span className="mono font-bold text-sm" style={{ color: "var(--accent)" }}>P</span>
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
+                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
+                  <span className="mono font-bold text-lg" style={{ color: "var(--accent)" }}>P</span>
+                  <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
                 </div>
                 <div>
-                  <h1 className="text-base font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+                  <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
                     Prompt Generator
                   </h1>
-                  <p className="mono text-[10px] tracking-widest" style={{ color: "var(--text-dim)" }}>
+                  <p className="mono text-[11px] tracking-widest" style={{ color: "var(--text-dim)" }}>
                     AI-POWERED · v1.0
                   </p>
                 </div>

@@ -199,23 +199,23 @@ export default function Home() {
 
             <div className="h-16 flex items-center justify-between">
               {/* Left: Logo */}
-              <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
-                  <span className="mono font-bold text-lg" style={{ color: "var(--accent)" }}>P</span>
-                  <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
+                  <span className="mono font-bold text-base sm:text-lg" style={{ color: "var(--accent)" }}>P</span>
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
+                  <h1 className="text-base sm:text-xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
                     Prompt Generator
                   </h1>
-                  <p className="mono text-[11px] tracking-widest" style={{ color: "var(--text-dim)" }}>
+                  <p className="mono text-[9px] sm:text-[11px] tracking-widest hidden sm:block" style={{ color: "var(--text-dim)" }}>
                     AI-POWERED · v1.0
                   </p>
                 </div>
               </div>
 
               {/* Center: Status (desktop) */}
-              <div className="hidden md:flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
                   <span className="mono text-[10px]" style={{ color: "var(--text-dim)" }}>SYSTEM ONLINE</span>
@@ -230,21 +230,23 @@ export default function Home() {
               </div>
 
               {/* Right: Nav + Theme */}
-              <div className="flex items-center gap-2">
-                <nav className="flex gap-1 mr-2">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <nav className="flex gap-1 mr-1 sm:mr-2">
                   <button
                     onClick={() => setTab("main")}
                     className="tab-btn"
                     data-active={tab === "main"}
                   >
-                    생성기
+                    <span className="hidden sm:inline">생성기</span>
+                    <span className="sm:hidden">생성</span>
                   </button>
                   <button
                     onClick={() => setTab("favorites")}
                     className="tab-btn"
                     data-active={tab === "favorites"}
                   >
-                    즐겨찾기
+                    <span className="hidden sm:inline">즐겨찾기</span>
+                    <span className="sm:hidden">★</span>
                     {favorites.length > 0 && (
                       <span className="mono text-[9px] ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15" style={{ color: "var(--accent)" }}>
                         {favorites.length}
@@ -258,7 +260,7 @@ export default function Home() {
                 {/* Theme Toggle */}
                 <button
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                   style={{ background: "var(--bg-input)" }}
                   title={theme === "dark" ? "라이트 모드" : "다크 모드"}
                 >
@@ -353,7 +355,7 @@ export default function Home() {
               {/* Purpose */}
               <div className="card p-4">
                 <label className="label">사용 목적</label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-2.5 mt-2">
                   {PURPOSES.map((p) => (
                     <button
                       key={p.id}
@@ -390,20 +392,31 @@ export default function Home() {
                 <button
                   onClick={generate}
                   disabled={loading || !userInput.trim()}
-                  className={`execute-btn ${loading || !userInput.trim() ? "execute-btn-disabled" : ""}`}
+                  className={`execute-btn group ${loading || !userInput.trim() ? "execute-btn-disabled" : ""}`}
                 >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="flex gap-1">
-                        {[0, 0.2, 0.4].map((d) => (
-                          <span key={d} className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
-                        ))}
-                      </span>
-                      생성 중
-                    </span>
-                  ) : (
-                    <span className="mono tracking-wider">EXECUTE</span>
-                  )}
+                  <div className="execute-glow" />
+                  <div className="relative z-10 flex items-center justify-center gap-3">
+                    {loading ? (
+                      <>
+                        <span className="flex gap-1.5">
+                          {[0, 0.15, 0.3].map((d) => (
+                            <span key={d} className="w-2 h-2 rounded-full pulse-dot bg-white" style={{ animationDelay: `${d}s` }} />
+                          ))}
+                        </span>
+                        <span className="text-white/90">PROCESSING</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+                          <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        <span className="mono tracking-[0.2em] font-semibold">EXECUTE</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-40">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </>
+                    )}
+                  </div>
                 </button>
               )}
             </div>
@@ -547,6 +560,7 @@ export default function Home() {
           border: 1px solid transparent;
         }
         .purpose-btn:hover { color: var(--text); border-color: var(--border-hover); }
+        .purpose-btn:active { transform: scale(0.97); }
         .purpose-btn-active {
           border-color: var(--border-accent) !important;
           color: var(--text) !important;
@@ -568,24 +582,49 @@ export default function Home() {
         .input-area:focus { border-color: var(--border-accent); }
 
         .execute-btn {
+          position: relative;
           width: 100%;
-          padding: 14px;
-          border-radius: 12px;
+          padding: 16px 20px;
+          border-radius: 14px;
           font-weight: 600;
-          font-size: 16px;
-          color: var(--accent);
-          background: var(--bg-input);
-          border: 1px solid var(--border-accent);
-          transition: all 0.2s;
+          font-size: 15px;
+          color: #fff;
+          background: linear-gradient(135deg, #059669 0%, #00c07b 50%, #10b981 100%);
+          border: none;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
           cursor: pointer;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0, 200, 120, 0.2), inset 0 1px 0 rgba(255,255,255,0.15);
         }
+        .execute-glow {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+        .execute-btn:hover:not(.execute-btn-disabled) .execute-glow { opacity: 1; }
         .execute-btn:hover:not(.execute-btn-disabled) {
-          box-shadow: 0 0 24px rgba(0,255,136,0.08);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 25px rgba(0, 200, 120, 0.3), 0 0 40px rgba(0, 255, 136, 0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .execute-btn:active:not(.execute-btn-disabled) {
+          transform: translateY(0);
+          box-shadow: 0 2px 10px rgba(0, 200, 120, 0.2);
         }
         .execute-btn-disabled {
-          opacity: 0.35;
+          opacity: 0.3;
           cursor: not-allowed;
-          border-color: var(--border);
+          background: var(--bg-input);
+          color: var(--text-dim);
+          box-shadow: none;
+          border: 1px solid var(--border);
+        }
+        [data-theme="light"] .execute-btn:not(.execute-btn-disabled) {
+          box-shadow: 0 4px 15px rgba(5, 150, 105, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        [data-theme="light"] .execute-btn:hover:not(.execute-btn-disabled) {
+          box-shadow: 0 6px 25px rgba(5, 150, 105, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
         }
 
         .result-box {
@@ -606,6 +645,7 @@ export default function Home() {
           cursor: pointer;
         }
         .btn-sm:hover { border-color: var(--border-hover); color: var(--text); }
+        .btn-sm:active { transform: scale(0.95); }
         .btn-fav { border-color: rgba(245,158,11,0.2) !important; color: rgb(245,158,11) !important; }
         .btn-fav:hover { background: rgba(245,158,11,0.08) !important; }
         .btn-danger { border-color: rgba(239,68,68,0.2) !important; color: rgb(239,68,68) !important; }

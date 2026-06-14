@@ -410,7 +410,7 @@ export default function Home() {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
                           <polygon points="5 3 19 12 5 21 5 3"/>
                         </svg>
-                        <span className="mono tracking-[0.2em] font-semibold">EXECUTE</span>
+                        <span className="mono tracking-[0.2em] font-semibold">GENERATE</span>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-40">
                           <polyline points="9 18 15 12 9 6"/>
                         </svg>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 type Model = "claude" | "gemini";
-type Tab = "main" | "favorites";
+type Tab = "main" | "favorites" | "guide";
 type Theme = "dark" | "light";
 
 interface Purpose {
@@ -59,6 +59,10 @@ const OPTIONS: Option[] = [
   { id: "concise", emoji: "⚡", label: "간결하게", instruction: "핵심만 간결하게 작성하세요" },
   { id: "korean", emoji: "KR", label: "한국어로", instruction: "반드시 한국어로 작성하세요" },
   { id: "expert", emoji: "🎓", label: "전문가 수준", instruction: "해당 분야 전문가 수준의 깊이로 작성하세요" },
+  { id: "english", emoji: "EN", label: "영어로", instruction: "반드시 영어로 작성하세요" },
+  { id: "compare", emoji: "🔄", label: "비교/대조", instruction: "비교와 대조 구조를 활용하여 작성하세요" },
+  { id: "qna", emoji: "❓", label: "Q&A 형식", instruction: "질문과 답변 형식으로 구성하세요" },
+  { id: "markdown", emoji: "📝", label: "마크다운", instruction: "마크다운 문법(제목, 볼드, 코드블록 등)을 활용하세요" },
 ];
 
 function MatrixBg({ theme }: { theme: Theme }) {
@@ -359,6 +363,10 @@ export default function Home() {
                       </span>
                     )}
                   </button>
+                  <button onClick={() => setTab("guide")} className="tab-btn" data-active={tab === "guide"}>
+                    <span className="hidden sm:inline">가이드</span>
+                    <span className="sm:hidden">?</span>
+                  </button>
                 </nav>
 
                 <div className="w-px h-5" style={{ background: "var(--border)" }} />
@@ -384,8 +392,85 @@ export default function Home() {
           </div>
         </header>
 
-        {/* ═══ FAVORITES TAB ═══ */}
-        {tab === "favorites" ? (
+        {/* ═══ GUIDE TAB ═══ */}
+        {tab === "guide" ? (
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+            {/* 사용법 */}
+            <div className="card p-6 fade-up">
+              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>사용법</h2>
+              <div className="space-y-4">
+                {[
+                  { step: "1", title: "모델 선택", desc: "Claude 또는 Gemini 중 원하는 AI 모델을 선택하세요. '비교' 버튼을 누르면 두 모델의 결과를 동시에 볼 수 있습니다." },
+                  { step: "2", title: "사용 목적 선택", desc: "프롬프트의 용도에 맞는 카테고리를 선택하세요. 목적에 따라 AI가 더 정확한 프롬프트를 만들어 줍니다." },
+                  { step: "3", title: "세부 조건 입력", desc: "만들고 싶은 프롬프트의 내용을 자유롭게 적어주세요. 구체적일수록 결과가 좋아집니다." },
+                  { step: "4", title: "추가 옵션 선택", desc: "원하는 스타일이나 형식을 선택하세요. 여러 개를 동시에 고를 수 있습니다." },
+                  { step: "5", title: "GENERATE", desc: "버튼을 누르면 AI가 최적화된 프롬프트를 실시간으로 생성합니다." },
+                ].map((item) => (
+                  <div key={item.step} className="flex gap-3">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mono text-xs font-bold" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+                      {item.step}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{item.title}</p>
+                      <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 사용 목적 설명 */}
+            <div className="card p-6 fade-up">
+              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>사용 목적</h2>
+              <div className="space-y-2.5">
+                {PURPOSES.map((p) => (
+                  <div key={p.id} className="flex items-start gap-3 py-2 px-3 rounded-lg" style={{ background: "var(--bg-input)" }}>
+                    <span className="text-base flex-shrink-0 mt-0.5">{p.emoji}</span>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{p.label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{p.placeholder}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 추가 옵션 설명 */}
+            <div className="card p-6 fade-up">
+              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>추가 옵션</h2>
+              <p className="text-xs mb-4" style={{ color: "var(--text-secondary)" }}>여러 개를 동시에 선택할 수 있습니다. 선택한 옵션이 프롬프트 생성에 반영됩니다.</p>
+              <div className="space-y-2.5">
+                {OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-start gap-3 py-2 px-3 rounded-lg" style={{ background: "var(--bg-input)" }}>
+                    <span className={`flex-shrink-0 mt-0.5 ${opt.id === "korean" || opt.id === "english" ? "mono text-[11px] font-semibold" : "text-base"}`} style={opt.id === "korean" || opt.id === "english" ? { color: "var(--text-dim)" } : undefined}>{opt.emoji}</span>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{opt.label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{opt.instruction}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 결과 정보 설명 */}
+            <div className="card p-6 fade-up">
+              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>결과 정보</h2>
+              <div className="space-y-3">
+                {[
+                  { label: "모델명", desc: "프롬프트를 생성한 AI 모델 이름" },
+                  { label: "입력 토큰", desc: "내가 입력한 내용의 크기 (한글 1자 ≈ 2~3토큰)" },
+                  { label: "출력 토큰", desc: "AI가 생성한 프롬프트의 크기" },
+                  { label: "응답 시간", desc: "요청부터 생성 완료까지 걸린 시간" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <span className="mono text-[11px] px-2 py-0.5 rounded font-medium flex-shrink-0" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>{item.label}</span>
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : tab === "favorites" ? (
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
             {favorites.length === 0 ? (
               <div className="card p-12 text-center">
@@ -503,7 +588,7 @@ export default function Home() {
                         onClick={() => toggleOption(opt.id)}
                         className={`option-btn ${selectedOptions.includes(opt.id) ? "option-btn-active" : ""}`}
                       >
-                        <span className={`mr-1.5 ${opt.id === "korean" ? "mono text-[11px] font-semibold" : "text-sm"}`}>{opt.emoji}</span>
+                        <span className={`mr-1.5 ${opt.id === "korean" || opt.id === "english" ? "mono text-[11px] font-semibold" : "text-sm"}`}>{opt.emoji}</span>
                         <span className="text-[13px]">{opt.label}</span>
                       </button>
                     ))}

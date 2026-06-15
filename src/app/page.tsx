@@ -282,15 +282,23 @@ export default function Home() {
     </div>
   );
 
+  const formatModelName = (raw: string) => {
+    const map: Record<string, string> = {
+      "claude-sonnet-4-6": "Claude Sonnet 4.6",
+      "gemini-2.5-flash": "Gemini 2.5 Flash",
+    };
+    return map[raw] || raw;
+  };
+
   const MetaInfo = ({ meta: m }: { meta: StreamMeta }) => (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mono text-[11px] mt-3 tracking-wider" style={{ color: "var(--text-dim)" }}>
-      <span>{m.model.toUpperCase()}</span>
+      <span>{formatModelName(m.model)}</span>
       <span className="opacity-40">·</span>
-      <span>IN {m.input_tokens.toLocaleString()}</span>
+      <span>입력 {m.input_tokens.toLocaleString()}토큰</span>
       <span className="opacity-40">·</span>
-      <span>OUT {m.output_tokens.toLocaleString()}</span>
+      <span>출력 {m.output_tokens.toLocaleString()}토큰</span>
       <span className="opacity-40">·</span>
-      <span>{(m.latency / 1000).toFixed(1)}s</span>
+      <span>응답 {(m.latency / 1000).toFixed(1)}초</span>
     </div>
   );
 

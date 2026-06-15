@@ -23,6 +23,20 @@ interface Favorite {
   timestamp: number;
 }
 
+interface StreamMeta {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  latency: number;
+}
+
+interface Option {
+  id: string;
+  emoji: string;
+  label: string;
+  instruction: string;
+}
+
 const PURPOSES: Purpose[] = [
   { id: "business-doc", emoji: "📄", label: "업무문서", placeholder: "프로젝트 제안서, 기획안 등 작성할 문서의 종류와 핵심 내용", systemPrompt: "당신은 비즈니스 문서 작성 전문가입니다. 명확하고 전문적인 업무 문서를 위한 프롬프트를 작성하세요. 문서 구조, 핵심 포함 요소, 톤앤매너, 분량 가이드를 포함하세요." },
   { id: "email", emoji: "📧", label: "이메일", placeholder: "수신자, 목적, 핵심 전달 사항, 원하는 톤", systemPrompt: "당신은 비즈니스 커뮤니케이션 전문가입니다. 목적에 맞는 효과적인 이메일을 위한 프롬프트를 작성하세요. 수신자 맞춤 톤, 구조, CTA를 포함하세요." },
@@ -34,6 +48,17 @@ const PURPOSES: Purpose[] = [
   { id: "claude-code", emoji: "💻", label: "클로드코드", placeholder: "개발할 기능, 사용 기술스택, 프로젝트 구조", systemPrompt: "당신은 Claude Code 전문가입니다. 명확한 개발 지시, 파일구조, 기술스택을 포함한 프롬프트를 작성하세요. 단계별 구현 지시, 에러 처리, 테스트 요구사항을 포함하세요." },
   { id: "roblox", emoji: "🎮", label: "로블록스 Lua", placeholder: "게임 장르, 필요한 기능, 게임 메카닉", systemPrompt: "당신은 Roblox 게임 개발 전문가입니다. Lua 스크립트, Roblox API, 게임 로직을 포함한 프롬프트를 작성하세요. 서버/클라이언트 구분, 보안, 성능 최적화를 포함하세요." },
   { id: "other", emoji: "✏️", label: "기타", placeholder: "원하는 프롬프트의 목적과 세부 요구사항을 자유롭게 입력하세요", systemPrompt: "당신은 AI 프롬프트 엔지니어링 전문가입니다. 사용자의 요구에 맞는 최적화된 프롬프트를 작성하세요. 명확한 역할 설정, 구체적 지시사항, 출력 형식, 제약 조건을 포함하세요." },
+];
+
+const OPTIONS: Option[] = [
+  { id: "detailed", emoji: "📋", label: "상세하게", instruction: "가능한 한 상세하고 구체적으로 작성하세요" },
+  { id: "step-by-step", emoji: "🔢", label: "단계별로", instruction: "단계별로 구분하여 체계적으로 작성하세요" },
+  { id: "with-examples", emoji: "💡", label: "예시 포함", instruction: "적절한 예시를 포함하세요" },
+  { id: "list-format", emoji: "📑", label: "표/목록 형식", instruction: "표나 목록 형식을 활용하세요" },
+  { id: "simple", emoji: "🐣", label: "쉬운 말로", instruction: "전문 용어를 피하고 쉬운 말로 작성하세요" },
+  { id: "concise", emoji: "⚡", label: "간결하게", instruction: "핵심만 간결하게 작성하세요" },
+  { id: "korean", emoji: "KR", label: "한국어로", instruction: "반드시 한국어로 작성하세요" },
+  { id: "expert", emoji: "🎓", label: "전문가 수준", instruction: "해당 분야 전문가 수준의 깊이로 작성하세요" },
 ];
 
 function MatrixBg({ theme }: { theme: Theme }) {
@@ -80,23 +105,40 @@ function MatrixBg({ theme }: { theme: Theme }) {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none opacity-60" style={{ zIndex: 0 }} />;
 }
 
-function TypeWriter({ text, speed = 12 }: { text: string; speed?: number }) {
-  const [displayed, setDisplayed] = useState("");
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    setDisplayed("");
-    setDone(false);
-    let i = 0;
-    const interval = setInterval(() => {
-      i += 3;
-      if (i >= text.length) { setDisplayed(text); clearInterval(interval); setDone(true); }
-      else setDisplayed(text.slice(0, i));
-    }, speed);
-    return () => clearInterval(interval);
-  }, [text, speed]);
-
-  return <span>{displayed}{!done && <span className="cursor-blink" />}</span>;
+async function readStream(
+  response: Response,
+  onText: (text: string) => void,
+  onDone: (meta: { model: string; input_tokens: number; output_tokens: number }) => void,
+  onError: (msg: string) => void,
+) {
+  if (!response.body) {
+    onError("스트림을 읽을 수 없습니다");
+    return;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === "text") onText(data.content);
+          else if (data.type === "done") onDone(data);
+          else if (data.type === "error") onError(data.message);
+        } catch {}
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 export default function Home() {
@@ -105,13 +147,16 @@ export default function Home() {
   const [selectedPurpose, setSelectedPurpose] = useState("");
   const [userInput, setUserInput] = useState("");
   const [result, setResult] = useState("");
-  const [compareResult, setCompareResult] = useState<{ claude: string; gemini: string } | null>(null);
+  const [compareResult, setCompareResult] = useState({ claude: "", gemini: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [tab, setTab] = useState<Tab>("main");
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [meta, setMeta] = useState<StreamMeta | null>(null);
+  const [compareMeta, setCompareMeta] = useState<{ claude: StreamMeta | null; gemini: StreamMeta | null }>({ claude: null, gemini: null });
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,32 +173,85 @@ export default function Home() {
 
   const saveFavorites = (favs: Favorite[]) => { setFavorites(favs); localStorage.setItem("prompt-favorites", JSON.stringify(favs)); };
   const currentPurpose = PURPOSES.find((p) => p.id === selectedPurpose);
-  const estimateTokens = (text: string) => Math.ceil(text.length / 3.5);
+
+  const hasAnyResult = compareMode
+    ? !!(compareResult.claude || compareResult.gemini)
+    : !!result;
 
   const generate = async () => {
     if (!currentPurpose || !userInput.trim()) return;
-    setLoading(true); setError(""); setResult(""); setCompareResult(null);
-    const payload = { systemPrompt: currentPurpose.systemPrompt, userMessage: `다음 요구사항에 맞는 최적화된 AI 프롬프트를 한국어로 작성해주세요.\n\n[목적] ${currentPurpose.label}\n[세부 요구사항] ${userInput}` };
+    setLoading(true);
+    setError("");
+    setResult("");
+    setCompareResult({ claude: "", gemini: "" });
+    setMeta(null);
+    setCompareMeta({ claude: null, gemini: null });
+
+    const optionsText = selectedOptions.length > 0
+      ? `\n[추가 옵션] ${selectedOptions.map(id => OPTIONS.find(o => o.id === id)?.instruction).filter(Boolean).join("; ")}`
+      : "";
+
+    const payload = {
+      systemPrompt: currentPurpose.systemPrompt,
+      userMessage: `다음 요구사항에 맞는 최적화된 AI 프롬프트를 한국어로 작성해주세요.\n\n[목적] ${currentPurpose.label}\n[세부 요구사항] ${userInput}${optionsText}`,
+    };
+
+    const startTime = Date.now();
+    setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
     try {
       if (compareMode) {
         const [claudeRes, geminiRes] = await Promise.allSettled([
-          fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then((r) => r.json()),
-          fetch("/api/gemini", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then((r) => r.json()),
+          fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }),
+          fetch("/api/gemini", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }),
         ]);
-        setCompareResult({
-          claude: claudeRes.status === "fulfilled" ? claudeRes.value.result || claudeRes.value.error || "ERROR" : "CONNECTION_FAILED",
-          gemini: geminiRes.status === "fulfilled" ? geminiRes.value.result || geminiRes.value.error || "ERROR" : "CONNECTION_FAILED",
-        });
+
+        const readModelStream = async (
+          settled: PromiseSettledResult<Response>,
+          key: "claude" | "gemini",
+        ) => {
+          if (settled.status === "rejected") {
+            setCompareResult(prev => ({ ...prev, [key]: "CONNECTION_FAILED" }));
+            return;
+          }
+          const response = settled.value;
+          const ct = response.headers.get("content-type") || "";
+          if (!response.ok || ct.includes("application/json")) {
+            const data = await response.json();
+            setCompareResult(prev => ({ ...prev, [key]: data.error || "ERROR" }));
+            return;
+          }
+          await readStream(
+            response,
+            (text) => setCompareResult(prev => ({ ...prev, [key]: prev[key] + text })),
+            (doneMeta) => setCompareMeta(prev => ({ ...prev, [key]: { ...doneMeta, latency: Date.now() - startTime } })),
+            (msg) => setCompareResult(prev => ({ ...prev, [key]: msg })),
+          );
+        };
+
+        await Promise.all([
+          readModelStream(claudeRes, "claude"),
+          readModelStream(geminiRes, "gemini"),
+        ]);
       } else {
         const res = await fetch(`/api/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "생성 실패");
-        setResult(data.result);
+        const ct = res.headers.get("content-type") || "";
+        if (!res.ok || ct.includes("application/json")) {
+          const data = await res.json();
+          throw new Error(data.error || "생성 실패");
+        }
+        await readStream(
+          res,
+          (text) => setResult(prev => prev + text),
+          (doneMeta) => setMeta({ ...doneMeta, latency: Date.now() - startTime }),
+          (msg) => setError(msg),
+        );
       }
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : "알 수 없는 오류");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copyToClipboard = async (text: string) => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
@@ -168,6 +266,12 @@ export default function Home() {
     const a = document.createElement("a"); a.href = url; a.download = `prompt_${Date.now()}.${format}`; a.click(); URL.revokeObjectURL(url);
   }, []);
 
+  const toggleOption = (id: string) => {
+    setSelectedOptions(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const ResultActions = ({ text, mdl }: { text: string; mdl: string }) => (
     <div className="flex flex-wrap gap-2 mt-3">
       <button onClick={() => copyToClipboard(text)} className="btn-sm">{copied ? "복사됨 ✓" : "복사"}</button>
@@ -178,9 +282,15 @@ export default function Home() {
     </div>
   );
 
-  const TokenCounter = ({ text }: { text: string }) => (
-    <div className="mono text-[11px] mt-2 tracking-wider" style={{ color: "var(--text-dim)" }}>
-      CHARS {text.length.toLocaleString()} &nbsp;·&nbsp; TOKENS ~{estimateTokens(text).toLocaleString()}
+  const MetaInfo = ({ meta: m }: { meta: StreamMeta }) => (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mono text-[11px] mt-3 tracking-wider" style={{ color: "var(--text-dim)" }}>
+      <span>{m.model.toUpperCase()}</span>
+      <span className="opacity-40">·</span>
+      <span>IN {m.input_tokens.toLocaleString()}</span>
+      <span className="opacity-40">·</span>
+      <span>OUT {m.output_tokens.toLocaleString()}</span>
+      <span className="opacity-40">·</span>
+      <span>{(m.latency / 1000).toFixed(1)}s</span>
     </div>
   );
 
@@ -192,13 +302,11 @@ export default function Home() {
         {/* ═══ HEADER ═══ */}
         <header className="sticky top-0 z-50 backdrop-blur-xl border-b" style={{ background: "var(--header-bg)", borderColor: "var(--border)" }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            {/* Top accent line */}
             <div className="h-[2px] -mx-4 sm:-mx-6 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40" />
             </div>
 
             <div className="h-16 flex items-center justify-between">
-              {/* Left: Logo */}
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
                   <span className="mono font-bold text-base sm:text-lg" style={{ color: "var(--accent)" }}>P</span>
@@ -214,7 +322,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Center: Status (desktop) */}
               <div className="hidden lg:flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
@@ -229,22 +336,13 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right: Nav + Theme */}
               <div className="flex items-center gap-1 sm:gap-2">
                 <nav className="flex gap-1 mr-1 sm:mr-2">
-                  <button
-                    onClick={() => setTab("main")}
-                    className="tab-btn"
-                    data-active={tab === "main"}
-                  >
+                  <button onClick={() => setTab("main")} className="tab-btn" data-active={tab === "main"}>
                     <span className="hidden sm:inline">생성기</span>
                     <span className="sm:hidden">생성</span>
                   </button>
-                  <button
-                    onClick={() => setTab("favorites")}
-                    className="tab-btn"
-                    data-active={tab === "favorites"}
-                  >
+                  <button onClick={() => setTab("favorites")} className="tab-btn" data-active={tab === "favorites"}>
                     <span className="hidden sm:inline">즐겨찾기</span>
                     <span className="sm:hidden">★</span>
                     {favorites.length > 0 && (
@@ -257,7 +355,6 @@ export default function Home() {
 
                 <div className="w-px h-5" style={{ background: "var(--border)" }} />
 
-                {/* Theme Toggle */}
                 <button
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
@@ -387,6 +484,25 @@ export default function Home() {
                 </div>
               )}
 
+              {/* Options */}
+              {currentPurpose && (
+                <div className="card p-4 fade-up">
+                  <label className="label">추가 옵션</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => toggleOption(opt.id)}
+                        className={`option-btn ${selectedOptions.includes(opt.id) ? "option-btn-active" : ""}`}
+                      >
+                        <span className={`mr-1.5 ${opt.id === "korean" ? "mono text-[11px] font-semibold" : "text-sm"}`}>{opt.emoji}</span>
+                        <span className="text-[13px]">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Execute */}
               {currentPurpose && (
                 <button
@@ -429,6 +545,7 @@ export default function Home() {
                 </div>
               )}
 
+              {/* Single result (streaming) */}
               {result && !compareMode && (
                 <div className="card p-5 fade-up">
                   <div className="flex items-center gap-2 mb-4">
@@ -439,15 +556,16 @@ export default function Home() {
                   </div>
                   <div className="result-box">
                     <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
-                      <TypeWriter text={result} />
+                      {result}{loading && <span className="cursor-blink" />}
                     </div>
                   </div>
-                  <ResultActions text={result} mdl={model} />
-                  <TokenCounter text={result} />
+                  {!loading && <ResultActions text={result} mdl={model} />}
+                  {!loading && meta && <MetaInfo meta={meta} />}
                 </div>
               )}
 
-              {compareResult && compareMode && (
+              {/* Compare results (streaming) */}
+              {compareMode && (compareResult.claude || compareResult.gemini) && (
                 <div className="space-y-4 fade-up">
                   {[
                     { key: "claude" as const, label: "CLAUDE", color: "orange" },
@@ -456,20 +574,36 @@ export default function Home() {
                     <div key={m.key} className="card p-5">
                       <div className="flex items-center gap-2 mb-4">
                         <span className={`mono text-[10px] px-2 py-0.5 rounded font-medium bg-${m.color}-500/15 text-${m.color}-400`}>{m.label}</span>
+                        {loading && !compareResult[m.key] && (
+                          <span className="text-xs" style={{ color: "var(--text-dim)" }}>연결 중...</span>
+                        )}
                       </div>
-                      <div className="result-box max-h-80 overflow-y-auto">
-                        <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
-                          <TypeWriter text={compareResult[m.key]} />
+                      {compareResult[m.key] ? (
+                        <>
+                          <div className="result-box max-h-80 overflow-y-auto">
+                            <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                              {compareResult[m.key]}{loading && !compareMeta[m.key] && <span className="cursor-blink" />}
+                            </div>
+                          </div>
+                          {!loading && <ResultActions text={compareResult[m.key]} mdl={m.key} />}
+                          {compareMeta[m.key] && <MetaInfo meta={compareMeta[m.key]!} />}
+                        </>
+                      ) : loading ? (
+                        <div className="result-box flex items-center justify-center py-8">
+                          <div className="flex gap-1.5">
+                            {[0, 0.15, 0.3].map((d) => (
+                              <span key={d} className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <ResultActions text={compareResult[m.key]} mdl={m.key} />
-                      <TokenCounter text={compareResult[m.key]} />
+                      ) : null}
                     </div>
                   ))}
                 </div>
               )}
 
-              {!result && !compareResult && !error && !loading && (
+              {/* Empty state */}
+              {!hasAnyResult && !error && !loading && (
                 <div className="card p-12 flex flex-col items-center justify-center min-h-[400px] text-center">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--bg-input)", border: "1px solid var(--border)" }}>
                     <span className="text-2xl" style={{ color: "var(--accent)" }}>⟩</span>
@@ -479,7 +613,8 @@ export default function Home() {
                 </div>
               )}
 
-              {loading && (
+              {/* Loading (before first text arrives) */}
+              {loading && !hasAnyResult && !error && (
                 <div className="card p-12 flex flex-col items-center justify-center min-h-[400px] shimmer">
                   <div className="flex gap-2 mb-4">
                     {[0, 0.2, 0.4].map((d) => (
@@ -566,6 +701,27 @@ export default function Home() {
           border-color: var(--border-accent) !important;
           color: var(--text) !important;
           background: var(--bg-card);
+        }
+
+        .option-btn {
+          padding: 7px 14px;
+          border-radius: 8px;
+          background: var(--bg-input);
+          color: var(--text-dim);
+          transition: all 0.15s;
+          border: 1px solid var(--border-inner);
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+        }
+        .option-btn:hover { color: var(--text-secondary); border-color: var(--border-hover); }
+        .option-btn:active { transform: scale(0.95); }
+        .option-btn-active {
+          border-color: var(--border-accent) !important;
+          color: var(--accent) !important;
+        }
+        [data-theme="light"] .option-btn {
+          border-color: var(--border);
         }
 
         .input-area {

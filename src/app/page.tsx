@@ -295,7 +295,7 @@ export default function Home() {
   };
 
   const MetaInfo = ({ meta: m }: { meta: StreamMeta }) => (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mono text-[11px] mt-3 tracking-wider" style={{ color: "var(--text-dim)" }}>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mono text-xs mt-3 tracking-wider" style={{ color: "var(--text-dim)" }}>
       <span>{formatModelName(m.model)}</span>
       <span className="opacity-40">·</span>
       <span>입력 {m.input_tokens.toLocaleString()}토큰</span>
@@ -325,10 +325,10 @@ export default function Home() {
                   <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
                 </div>
                 <div>
-                  <h1 className="text-base sm:text-xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
+                  <h1 className="text-lg sm:text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
                     Prompt Generator
                   </h1>
-                  <p className="mono text-[9px] sm:text-[11px] tracking-widest hidden sm:block" style={{ color: "var(--text-dim)" }}>
+                  <p className="mono text-[10px] sm:text-xs tracking-widest hidden sm:block" style={{ color: "var(--text-dim)" }}>
                     AI-POWERED · v1.0
                   </p>
                 </div>
@@ -337,12 +337,12 @@ export default function Home() {
               <div className="hidden lg:flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
-                  <span className="mono text-[10px]" style={{ color: "var(--text-dim)" }}>SYSTEM ONLINE</span>
+                  <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>SYSTEM ONLINE</span>
                 </div>
                 <div className="w-px h-3" style={{ background: "var(--border)" }} />
                 <div className="flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${model === "claude" ? "bg-orange-400" : "bg-blue-400"}`} />
-                  <span className="mono text-[10px]" style={{ color: "var(--text-dim)" }}>
+                  <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                     {compareMode ? "COMPARE" : model.toUpperCase()}
                   </span>
                 </div>
@@ -358,7 +358,7 @@ export default function Home() {
                     <span className="hidden sm:inline">즐겨찾기</span>
                     <span className="sm:hidden">★</span>
                     {favorites.length > 0 && (
-                      <span className="mono text-[9px] ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15" style={{ color: "var(--accent)" }}>
+                      <span className="mono text-[10px] ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15" style={{ color: "var(--accent)" }}>
                         {favorites.length}
                       </span>
                     )}
@@ -397,7 +397,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
             {/* 사용법 */}
             <div className="card p-6 fade-up">
-              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>사용법</h2>
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>사용법</h2>
               <div className="space-y-4">
                 {[
                   { step: "1", title: "모델 선택", desc: "Claude 또는 Gemini 중 원하는 AI 모델을 선택하세요. '비교' 버튼을 누르면 두 모델의 결과를 동시에 볼 수 있습니다." },
@@ -407,12 +407,12 @@ export default function Home() {
                   { step: "5", title: "GENERATE", desc: "버튼을 누르면 AI가 최적화된 프롬프트를 실시간으로 생성합니다." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-3">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mono text-xs font-bold" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mono text-sm font-bold" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>
                       {item.step}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{item.title}</p>
-                      <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{item.desc}</p>
+                      <p className="text-base font-semibold" style={{ color: "var(--text)" }}>{item.title}</p>
+                      <p className="text-sm mt-0.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -421,14 +421,14 @@ export default function Home() {
 
             {/* 사용 목적 설명 */}
             <div className="card p-6 fade-up">
-              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>사용 목적</h2>
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>사용 목적</h2>
               <div className="space-y-2.5">
                 {PURPOSES.map((p) => (
-                  <div key={p.id} className="flex items-start gap-3 py-2 px-3 rounded-lg" style={{ background: "var(--bg-input)" }}>
-                    <span className="text-base flex-shrink-0 mt-0.5">{p.emoji}</span>
+                  <div key={p.id} className="flex items-start gap-3 py-2.5 px-3 rounded-lg" style={{ background: "var(--bg-input)" }}>
+                    <span className="text-lg flex-shrink-0 mt-0.5">{p.emoji}</span>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{p.label}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{p.placeholder}</p>
+                      <p className="text-base font-semibold" style={{ color: "var(--text)" }}>{p.label}</p>
+                      <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>{p.placeholder}</p>
                     </div>
                   </div>
                 ))}
@@ -437,8 +437,8 @@ export default function Home() {
 
             {/* 추가 옵션 설명 */}
             <div className="card p-6 fade-up">
-              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>추가 옵션</h2>
-              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>추가 옵션</h2>
+              <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                 여러 개를 동시에 선택할 수 있습니다. 선택한 옵션이 프롬프트 생성에 반영됩니다.<br/>
                 옵션을 조합하면 더 정교한 프롬프트를 만들 수 있습니다.
               </p>
@@ -530,26 +530,26 @@ export default function Home() {
                   },
                 ].map((opt) => (
                   <div key={opt.id} className="rounded-xl overflow-hidden" style={{ background: "var(--bg-input)", border: "1px solid var(--border-inner)" }}>
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <span className={`flex-shrink-0 ${opt.id === "korean" || opt.id === "english" ? "mono text-[11px] font-semibold" : "text-base"}`} style={opt.id === "korean" || opt.id === "english" ? { color: "var(--text-dim)" } : undefined}>{opt.emoji}</span>
-                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{opt.label}</p>
+                    <div className="px-4 py-3.5 flex items-center gap-3">
+                      <span className={`flex-shrink-0 ${opt.id === "korean" || opt.id === "english" ? "mono text-sm font-semibold" : "text-xl"}`} style={opt.id === "korean" || opt.id === "english" ? { color: "var(--text-dim)" } : undefined}>{opt.emoji}</span>
+                      <p className="text-lg font-semibold" style={{ color: "var(--text)" }}>{opt.label}</p>
                     </div>
-                    <div className="px-4 pb-3 space-y-2">
-                      <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>{opt.desc}</p>
+                    <div className="px-4 pb-4 space-y-2.5">
+                      <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{opt.desc}</p>
                       <div className="flex items-start gap-2">
-                        <span className="mono text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: "var(--bg-card)", color: "var(--accent)", border: "1px solid var(--border)" }}>추천</span>
-                        <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-dim)" }}>{opt.when}</p>
+                        <span className="mono text-xs px-2 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: "var(--bg-card)", color: "var(--accent)", border: "1px solid var(--border)" }}>추천</span>
+                        <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-dim)" }}>{opt.when}</p>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="mono text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: "var(--bg-card)", color: "var(--text-dim)", border: "1px solid var(--border)" }}>TIP</span>
-                        <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-dim)" }}>{opt.tip}</p>
+                        <span className="mono text-xs px-2 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: "var(--bg-card)", color: "var(--text-dim)", border: "1px solid var(--border)" }}>TIP</span>
+                        <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-dim)" }}>{opt.tip}</p>
                       </div>
                       <div className="flex items-center gap-1.5 pt-1">
-                        <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>잘 맞는 조합:</span>
+                        <span className="text-xs" style={{ color: "var(--text-dim)" }}>잘 맞는 조합:</span>
                         {opt.pair.map((pId) => {
                           const paired = OPTIONS.find(o => o.id === pId);
                           return paired ? (
-                            <span key={pId} className="mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--bg-card)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
+                            <span key={pId} className="mono text-xs px-2 py-0.5 rounded" style={{ background: "var(--bg-card)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
                               {paired.emoji} {paired.label}
                             </span>
                           ) : null;
@@ -563,7 +563,7 @@ export default function Home() {
 
             {/* 결과 정보 설명 */}
             <div className="card p-6 fade-up">
-              <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text)" }}>결과 정보</h2>
+              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>결과 정보</h2>
               <div className="space-y-3">
                 {[
                   { label: "모델명", desc: "프롬프트를 생성한 AI 모델 이름" },
@@ -572,8 +572,8 @@ export default function Home() {
                   { label: "응답 시간", desc: "요청부터 생성 완료까지 걸린 시간" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-3">
-                    <span className="mono text-[11px] px-2 py-0.5 rounded font-medium flex-shrink-0" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>{item.label}</span>
-                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.desc}</span>
+                    <span className="mono text-xs px-2 py-0.5 rounded font-medium flex-shrink-0" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>{item.label}</span>
+                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{item.desc}</span>
                   </div>
                 ))}
               </div>
@@ -583,8 +583,8 @@ export default function Home() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
             {favorites.length === 0 ? (
               <div className="card p-12 text-center">
-                <p className="text-sm" style={{ color: "var(--text-secondary)" }}>저장된 프롬프트가 없습니다</p>
-                <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>생성된 프롬프트에서 ★ 저장을 눌러보세요</p>
+                <p className="text-base" style={{ color: "var(--text-secondary)" }}>저장된 프롬프트가 없습니다</p>
+                <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>생성된 프롬프트에서 ★ 저장을 눌러보세요</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -592,19 +592,19 @@ export default function Home() {
                   <div key={fav.id} className="card p-5 fade-up">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
-                        <span className={`mono text-[10px] px-2 py-0.5 rounded font-medium ${fav.model === "claude" ? "bg-orange-500/15 text-orange-400" : "bg-blue-500/15 text-blue-400"}`}>
+                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${fav.model === "claude" ? "bg-orange-500/15 text-orange-400" : "bg-blue-500/15 text-blue-400"}`}>
                           {fav.model.toUpperCase()}
                         </span>
-                        <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{fav.purpose}</span>
-                        <span className="text-xs" style={{ color: "var(--text-dim)" }}>{new Date(fav.timestamp).toLocaleDateString("ko")}</span>
+                        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{fav.purpose}</span>
+                        <span className="text-sm" style={{ color: "var(--text-dim)" }}>{new Date(fav.timestamp).toLocaleDateString("ko")}</span>
                       </div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => copyToClipboard(fav.result)} className="btn-sm text-[11px]">복사</button>
-                        <button onClick={() => removeFavorite(fav.id)} className="btn-sm btn-danger text-[11px]">삭제</button>
+                        <button onClick={() => copyToClipboard(fav.result)} className="btn-sm text-xs">복사</button>
+                        <button onClick={() => removeFavorite(fav.id)} className="btn-sm btn-danger text-xs">삭제</button>
                       </div>
                     </div>
-                    <p className="text-xs mb-2 truncate" style={{ color: "var(--text-dim)" }}>{fav.input}</p>
-                    <p className="text-sm leading-relaxed line-clamp-4" style={{ color: "var(--text-secondary)" }}>{fav.result}</p>
+                    <p className="text-sm mb-2 truncate" style={{ color: "var(--text-dim)" }}>{fav.input}</p>
+                    <p className="text-base leading-relaxed line-clamp-4" style={{ color: "var(--text-secondary)" }}>{fav.result}</p>
                   </div>
                 ))}
               </div>
@@ -628,7 +628,7 @@ export default function Home() {
                     <button
                       key={m.key}
                       onClick={() => { setModel(m.key); setCompareMode(false); }}
-                      className={`flex-1 py-3 rounded-lg text-base font-medium transition-all flex items-center justify-center gap-2 ${
+                      className={`flex-1 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
                         model === m.key && !compareMode
                           ? `bg-${m.color}-500/15 text-${m.color}-400 ring-1 ring-${m.color}-500/30`
                           : "model-btn-inactive"
@@ -640,7 +640,7 @@ export default function Home() {
                   ))}
                   <button
                     onClick={() => setCompareMode(!compareMode)}
-                    className={`px-5 py-3 rounded-lg text-base font-medium transition-all flex items-center justify-center gap-2 ${
+                    className={`px-5 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
                       compareMode ? "bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30" : "model-btn-inactive"
                     }`}
                   >
@@ -648,7 +648,7 @@ export default function Home() {
                     비교
                   </button>
                 </div>
-                {compareMode && <p className="text-[11px] text-purple-400/70 mt-2 fade-up">Claude와 Gemini 결과를 동시에 비교합니다</p>}
+                {compareMode && <p className="text-xs text-purple-400/70 mt-2 fade-up">Claude와 Gemini 결과를 동시에 비교합니다</p>}
               </div>
 
               {/* Purpose */}
@@ -661,8 +661,8 @@ export default function Home() {
                       onClick={() => setSelectedPurpose(p.id)}
                       className={`purpose-btn ${selectedPurpose === p.id ? "purpose-btn-active" : ""}`}
                     >
-                      <span className="text-base mr-1.5">{p.emoji}</span>
-                      <span className="text-[15px]">{p.label}</span>
+                      <span className="text-lg mr-1.5">{p.emoji}</span>
+                      <span className="text-base">{p.label}</span>
                       {selectedPurpose === p.id && <span className="absolute top-1.5 right-2 text-xs" style={{ color: "var(--accent)" }}>✓</span>}
                     </button>
                   ))}
@@ -697,8 +697,8 @@ export default function Home() {
                         onClick={() => toggleOption(opt.id)}
                         className={`option-btn ${selectedOptions.includes(opt.id) ? "option-btn-active" : ""}`}
                       >
-                        <span className={`mr-1.5 ${opt.id === "korean" || opt.id === "english" ? "mono text-[11px] font-semibold" : "text-sm"}`}>{opt.emoji}</span>
-                        <span className="text-[13px]">{opt.label}</span>
+                        <span className={`mr-1.5 ${opt.id === "korean" || opt.id === "english" ? "mono text-xs font-semibold" : "text-base"}`}>{opt.emoji}</span>
+                        <span className="text-sm">{opt.label}</span>
                       </button>
                     ))}
                   </div>
@@ -743,7 +743,7 @@ export default function Home() {
             <div ref={resultRef} className="lg:col-span-7 space-y-4">
               {error && (
                 <div className="card card-error p-4 fade-up">
-                  <p className="text-red-400 text-sm">{error}</p>
+                  <p className="text-red-400 text-base">{error}</p>
                 </div>
               )}
 
@@ -751,13 +751,13 @@ export default function Home() {
               {result && !compareMode && (
                 <div className="card p-5 fade-up">
                   <div className="flex items-center gap-2 mb-4">
-                    <span className={`mono text-[10px] px-2 py-0.5 rounded font-medium ${model === "claude" ? "bg-orange-500/15 text-orange-400" : "bg-blue-500/15 text-blue-400"}`}>
+                    <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${model === "claude" ? "bg-orange-500/15 text-orange-400" : "bg-blue-500/15 text-blue-400"}`}>
                       {model.toUpperCase()}
                     </span>
-                    <span className="text-xs" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
+                    <span className="text-sm" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
                   </div>
                   <div className="result-box">
-                    <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                    <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
                       {result}{loading && <span className="cursor-blink" />}
                     </div>
                   </div>
@@ -775,15 +775,15 @@ export default function Home() {
                   ].map((m) => (
                     <div key={m.key} className="card p-5">
                       <div className="flex items-center gap-2 mb-4">
-                        <span className={`mono text-[10px] px-2 py-0.5 rounded font-medium bg-${m.color}-500/15 text-${m.color}-400`}>{m.label}</span>
+                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium bg-${m.color}-500/15 text-${m.color}-400`}>{m.label}</span>
                         {loading && !compareResult[m.key] && (
-                          <span className="text-xs" style={{ color: "var(--text-dim)" }}>연결 중...</span>
+                          <span className="text-sm" style={{ color: "var(--text-dim)" }}>연결 중...</span>
                         )}
                       </div>
                       {compareResult[m.key] ? (
                         <>
                           <div className="result-box max-h-80 overflow-y-auto">
-                            <div className="text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                            <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
                               {compareResult[m.key]}{loading && !compareMeta[m.key] && <span className="cursor-blink" />}
                             </div>
                           </div>
@@ -810,8 +810,8 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--bg-input)", border: "1px solid var(--border)" }}>
                     <span className="text-2xl" style={{ color: "var(--accent)" }}>⟩</span>
                   </div>
-                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>결과가 여기에 표시됩니다</p>
-                  <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>모델과 목적을 선택한 후 실행하세요</p>
+                  <p className="text-base" style={{ color: "var(--text-secondary)" }}>결과가 여기에 표시됩니다</p>
+                  <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>모델과 목적을 선택한 후 실행하세요</p>
                 </div>
               )}
 
@@ -823,7 +823,7 @@ export default function Home() {
                       <span key={d} className="w-2 h-2 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
                     ))}
                   </div>
-                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                  <p className="text-base" style={{ color: "var(--text-secondary)" }}>
                     {compareMode ? "Claude & Gemini 동시 생성 중" : `${model === "claude" ? "Claude" : "Gemini"} 생성 중`}
                   </p>
                 </div>
@@ -832,7 +832,7 @@ export default function Home() {
           </div>
 
           <div className="mt-12 text-center">
-            <p className="mono text-[11px] tracking-wider" style={{ color: "var(--text-dim)" }}>
+            <p className="mono text-xs tracking-wider" style={{ color: "var(--text-dim)" }}>
               PROMPT_GENERATOR v1.0 — {new Date().getFullYear()}
             </p>
           </div>
@@ -859,7 +859,7 @@ export default function Home() {
 
         .label {
           display: block;
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 600;
           color: var(--text-dim);
           text-transform: uppercase;
@@ -868,7 +868,7 @@ export default function Home() {
 
         .tab-btn {
           padding: 6px 14px;
-          font-size: 14px;
+          font-size: 15px;
           border-radius: 8px;
           color: var(--text-dim);
           transition: all 0.15s;
@@ -891,7 +891,7 @@ export default function Home() {
           padding: 12px 14px;
           border-radius: 10px;
           text-align: left;
-          font-size: 15px;
+          font-size: 16px;
           background: var(--bg-input);
           color: var(--text-secondary);
           transition: all 0.15s;
@@ -931,7 +931,7 @@ export default function Home() {
           background: var(--bg-input);
           border-radius: 10px;
           padding: 14px 18px 14px 30px;
-          font-size: 15px;
+          font-size: 16px;
           color: var(--text);
           resize: none;
           border: 1px solid var(--border-inner);
@@ -949,7 +949,7 @@ export default function Home() {
           padding: 16px 20px;
           border-radius: 14px;
           font-weight: 600;
-          font-size: 15px;
+          font-size: 16px;
           color: #fff;
           background: linear-gradient(135deg, #059669 0%, #00c07b 50%, #10b981 100%);
           border: none;
@@ -1001,7 +1001,7 @@ export default function Home() {
 
         .btn-sm {
           padding: 6px 14px;
-          font-size: 13px;
+          font-size: 14px;
           border-radius: 8px;
           border: 1px solid var(--border);
           color: var(--text-secondary);

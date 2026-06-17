@@ -764,34 +764,52 @@ export default function Home() {
                       onChange={(e) => { handleFileSelect(e.target.files); e.target.value = ""; }}
                       className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                      onDragLeave={() => setDragOver(false)}
-                      onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
-                      className={`file-drop-zone ${dragOver ? "file-drop-zone-active" : ""}`}
-                    >
-                      <span style={{ color: "var(--text-dim)" }}>
-                        <span className="text-base mr-1.5">📎</span>
-                        파일 첨부
-                        <span className="hidden sm:inline"> (드래그 또는 클릭)</span>
-                      </span>
-                      <span className="text-xs block mt-1" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
-                        이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 5MB, {MAX_FILES}개)
-                      </span>
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                        onDragLeave={() => setDragOver(false)}
+                        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
+                        className={`file-drop-zone flex-1 ${dragOver ? "file-drop-zone-active" : ""}`}
+                      >
+                        <span style={{ color: "var(--text-dim)" }}>
+                          <span className="text-base mr-1.5">📎</span>
+                          <span className="sm:hidden">파일 첨부 (탭하여 선택)</span>
+                          <span className="hidden sm:inline">파일 첨부 (드래그 또는 클릭)</span>
+                        </span>
+                        <span className="text-xs block mt-1" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
+                          이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 5MB, {MAX_FILES}개)
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "image/*";
+                          input.capture = "environment";
+                          input.onchange = () => handleFileSelect(input.files);
+                          input.click();
+                        }}
+                        className="file-camera-btn sm:hidden"
+                        title="카메라"
+                      >
+                        <span className="text-xl">📷</span>
+                        <span className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>촬영</span>
+                      </button>
+                    </div>
 
                     {attachedFiles.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {attachedFiles.map((f) => (
                           <div key={f.id} className="file-chip fade-up">
-                            <span>{getFileIcon(f.name)}</span>
-                            <span className="truncate max-w-[120px] text-sm" style={{ color: "var(--text-secondary)" }}>{f.name}</span>
+                            <span className="text-base">{getFileIcon(f.name)}</span>
+                            <span className="truncate max-w-[100px] sm:max-w-[120px] text-sm" style={{ color: "var(--text-secondary)" }}>{f.name}</span>
                             <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>{formatFileSize(f.size)}</span>
                             <button
                               onClick={() => removeFile(f.id)}
-                              className="ml-0.5 w-5 h-5 rounded flex items-center justify-center text-sm transition-colors hover:bg-red-500/15 hover:text-red-400"
+                              className="file-chip-remove"
                               style={{ color: "var(--text-dim)" }}
                             >
                               ×
@@ -1143,16 +1161,32 @@ export default function Home() {
 
         .file-drop-zone {
           width: 100%;
-          padding: 12px 16px;
+          padding: 14px 16px;
           border-radius: 10px;
           border: 1.5px dashed var(--border-hover);
           background: transparent;
           text-align: center;
           cursor: pointer;
           transition: all 0.2s;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        }
+        @media (max-width: 639px) {
+          .file-drop-zone {
+            padding: 16px 12px;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
         }
         .file-drop-zone:hover {
           border-color: var(--border-accent);
+          background: var(--bg-input);
+        }
+        .file-drop-zone:active {
+          transform: scale(0.98);
           background: var(--bg-input);
         }
         .file-drop-zone-active {
@@ -1163,18 +1197,61 @@ export default function Home() {
           background: rgba(5, 150, 105, 0.05) !important;
         }
 
+        .file-camera-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 64px;
+          flex-shrink: 0;
+          border-radius: 10px;
+          border: 1.5px dashed var(--border-hover);
+          background: transparent;
+          cursor: pointer;
+          transition: all 0.2s;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        }
+        .file-camera-btn:hover, .file-camera-btn:active {
+          border-color: var(--border-accent);
+          background: var(--bg-input);
+        }
+        .file-camera-btn:active {
+          transform: scale(0.95);
+        }
+
         .file-chip {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 5px 10px;
+          padding: 7px 10px;
           border-radius: 8px;
           background: var(--bg-input);
           border: 1px solid var(--border-inner);
           transition: border-color 0.15s;
+          max-width: 100%;
         }
         .file-chip:hover {
           border-color: var(--border-hover);
+        }
+
+        .file-chip-remove {
+          margin-left: 2px;
+          width: 28px;
+          height: 28px;
+          min-width: 28px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          transition: all 0.15s;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        }
+        .file-chip-remove:hover, .file-chip-remove:active {
+          background: rgba(239, 68, 68, 0.15);
+          color: rgb(239, 68, 68) !important;
         }
       `}</style>
     </>

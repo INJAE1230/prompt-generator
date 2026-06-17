@@ -189,7 +189,7 @@ export default function Home() {
   const saveFavorites = (favs: Favorite[]) => { setFavorites(favs); localStorage.setItem("prompt-favorites", JSON.stringify(favs)); };
   const currentPurpose = PURPOSES.find((p) => p.id === selectedPurpose);
 
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const MAX_FILE_SIZE = 4 * 1024 * 1024;
   const MAX_FILES = 5;
   const ACCEPTED_EXTENSIONS = ".png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.xls,.docx,.txt,.csv,.md,.json";
 
@@ -210,7 +210,7 @@ export default function Home() {
         break;
       }
       if (file.size > MAX_FILE_SIZE) {
-        setError(`${file.name}: 파일 크기가 5MB를 초과합니다`);
+        setError(`${file.name}: 파일 크기가 4MB를 초과합니다`);
         continue;
       }
       const data = await fileToBase64(file);
@@ -270,14 +270,37 @@ export default function Home() {
       files: filesPayload,
     };
 
+    const bodyStr = JSON.stringify(payload);
+    const bodySize = new Blob([bodyStr]).size;
+    if (bodySize > 4 * 1024 * 1024) {
+      setError(`요청 크기가 너무 큽니다 (${(bodySize / 1024 / 1024).toFixed(1)}MB). 파일 크기를 줄이거나 개수를 줄여주세요.`);
+      setLoading(false);
+      return;
+    }
+
     const startTime = Date.now();
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
+    const safeParseError = async (response: Response): Promise<string> => {
+      try {
+        const ct = response.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const data = await response.json();
+          return data.error || `오류: ${response.status}`;
+        }
+        const text = await response.text();
+        if (response.status === 413) return "파일 크기가 너무 큽니다. 더 작은 파일을 사용해주세요.";
+        return text.slice(0, 200) || `오류: ${response.status}`;
+      } catch {
+        return `서버 오류: ${response.status}`;
+      }
+    };
 
     try {
       if (compareMode) {
         const [claudeRes, geminiRes] = await Promise.allSettled([
-          fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }),
-          fetch("/api/gemini", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }),
+          fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr }),
+          fetch("/api/gemini", { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr }),
         ]);
 
         const readModelStream = async (
@@ -289,8 +312,13 @@ export default function Home() {
             return;
           }
           const response = settled.value;
+          if (!response.ok) {
+            const msg = await safeParseError(response);
+            setCompareResult(prev => ({ ...prev, [key]: msg }));
+            return;
+          }
           const ct = response.headers.get("content-type") || "";
-          if (!response.ok || ct.includes("application/json")) {
+          if (ct.includes("application/json")) {
             const data = await response.json();
             setCompareResult(prev => ({ ...prev, [key]: data.error || "ERROR" }));
             return;
@@ -308,9 +336,12 @@ export default function Home() {
           readModelStream(geminiRes, "gemini"),
         ]);
       } else {
-        const res = await fetch(`/api/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const res = await fetch(`/api/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr });
+        if (!res.ok) {
+          throw new Error(await safeParseError(res));
+        }
         const ct = res.headers.get("content-type") || "";
-        if (!res.ok || ct.includes("application/json")) {
+        if (ct.includes("application/json")) {
           const data = await res.json();
           throw new Error(data.error || "생성 실패");
         }
@@ -779,7 +810,7 @@ export default function Home() {
                           <span className="hidden sm:inline">파일 첨부 (드래그 또는 클릭)</span>
                         </span>
                         <span className="text-xs block mt-1" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
-                          이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 5MB, {MAX_FILES}개)
+                          이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 4MB, {MAX_FILES}개)
                         </span>
                       </button>
                       <button

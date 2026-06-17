@@ -1,6 +1,13 @@
 import { NextRequest } from "next/server";
+import { extractText, isNativeMedia, getMediaType } from "@/lib/parse-file";
 
 export const dynamic = "force-dynamic";
+
+interface FilePayload {
+  name: string;
+  type: string;
+  data: string;
+}
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -12,7 +19,33 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { systemPrompt, userMessage } = await req.json();
+    const { systemPrompt, userMessage, files = [] } = await req.json();
+
+    const content: unknown[] = [];
+
+    for (const file of files as FilePayload[]) {
+      if (isNativeMedia(file)) {
+        const mediaType = getMediaType(file);
+        if (mediaType === "application/pdf") {
+          content.push({
+            type: "document",
+            source: { type: "base64", media_type: mediaType, data: file.data },
+          });
+        } else {
+          content.push({
+            type: "image",
+            source: { type: "base64", media_type: mediaType, data: file.data },
+          });
+        }
+      } else {
+        const text = await extractText(file);
+        if (text) {
+          content.push({ type: "text", text: `[첨부파일: ${file.name}]\n${text}` });
+        }
+      }
+    }
+
+    content.push({ type: "text", text: userMessage });
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -26,7 +59,7 @@ export async function POST(req: NextRequest) {
         max_tokens: 4096,
         stream: true,
         system: systemPrompt,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [{ role: "user", content }],
       }),
     });
 

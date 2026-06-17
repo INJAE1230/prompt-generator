@@ -30,6 +30,14 @@ interface StreamMeta {
   latency: number;
 }
 
+interface AttachedFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+}
+
 interface Option {
   id: string;
   emoji: string;
@@ -161,6 +169,9 @@ export default function Home() {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [meta, setMeta] = useState<StreamMeta | null>(null);
   const [compareMeta, setCompareMeta] = useState<{ claude: StreamMeta | null; gemini: StreamMeta | null }>({ claude: null, gemini: null });
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -177,6 +188,59 @@ export default function Home() {
 
   const saveFavorites = (favs: Favorite[]) => { setFavorites(favs); localStorage.setItem("prompt-favorites", JSON.stringify(favs)); };
   const currentPurpose = PURPOSES.find((p) => p.id === selectedPurpose);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const MAX_FILES = 5;
+  const ACCEPTED_EXTENSIONS = ".png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.xls,.docx,.txt,.csv,.md,.json";
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleFileSelect = async (fileList: FileList | null) => {
+    if (!fileList) return;
+    const newFiles: AttachedFile[] = [];
+    for (const file of Array.from(fileList)) {
+      if (attachedFiles.length + newFiles.length >= MAX_FILES) {
+        setError(`최대 ${MAX_FILES}개까지 첨부할 수 있습니다`);
+        break;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`${file.name}: 파일 크기가 5MB를 초과합니다`);
+        continue;
+      }
+      const data = await fileToBase64(file);
+      newFiles.push({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data,
+      });
+    }
+    setAttachedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const removeFile = (id: string) => setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
+
+  const getFileIcon = (name: string) => {
+    const ext = name.split(".").pop()?.toLowerCase();
+    if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext || "")) return "🖼️";
+    if (ext === "pdf") return "📕";
+    if (["xlsx", "xls", "csv"].includes(ext || "")) return "📊";
+    if (ext === "docx") return "📝";
+    return "📄";
+  };
 
   const hasAnyResult = compareMode
     ? !!(compareResult.claude || compareResult.gemini)
@@ -195,9 +259,15 @@ export default function Home() {
       ? `\n[추가 옵션] ${selectedOptions.map(id => OPTIONS.find(o => o.id === id)?.instruction).filter(Boolean).join("; ")}`
       : "";
 
+    const filesPayload = attachedFiles.map((f) => ({ name: f.name, type: f.type, data: f.data }));
+    const fileNames = attachedFiles.length > 0
+      ? `\n[첨부파일] ${attachedFiles.map((f) => f.name).join(", ")}`
+      : "";
+
     const payload = {
       systemPrompt: currentPurpose.systemPrompt,
-      userMessage: `다음 요구사항에 맞는 최적화된 AI 프롬프트를 한국어로 작성해주세요.\n\n[목적] ${currentPurpose.label}\n[세부 요구사항] ${userInput}${optionsText}`,
+      userMessage: `다음 요구사항에 맞는 최적화된 AI 프롬프트를 한국어로 작성해주세요.\n\n[목적] ${currentPurpose.label}\n[세부 요구사항] ${userInput}${optionsText}${fileNames}`,
+      files: filesPayload,
     };
 
     const startTime = Date.now();
@@ -683,6 +753,54 @@ export default function Home() {
                       className="input-area"
                     />
                   </div>
+
+                  {/* File attachment */}
+                  <div className="mt-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept={ACCEPTED_EXTENSIONS}
+                      onChange={(e) => { handleFileSelect(e.target.files); e.target.value = ""; }}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
+                      className={`file-drop-zone ${dragOver ? "file-drop-zone-active" : ""}`}
+                    >
+                      <span style={{ color: "var(--text-dim)" }}>
+                        <span className="text-base mr-1.5">📎</span>
+                        파일 첨부
+                        <span className="hidden sm:inline"> (드래그 또는 클릭)</span>
+                      </span>
+                      <span className="text-xs block mt-1" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
+                        이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 5MB, {MAX_FILES}개)
+                      </span>
+                    </button>
+
+                    {attachedFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {attachedFiles.map((f) => (
+                          <div key={f.id} className="file-chip fade-up">
+                            <span>{getFileIcon(f.name)}</span>
+                            <span className="truncate max-w-[120px] text-sm" style={{ color: "var(--text-secondary)" }}>{f.name}</span>
+                            <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>{formatFileSize(f.size)}</span>
+                            <button
+                              onClick={() => removeFile(f.id)}
+                              className="ml-0.5 w-5 h-5 rounded flex items-center justify-center text-sm transition-colors hover:bg-red-500/15 hover:text-red-400"
+                              style={{ color: "var(--text-dim)" }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1021,6 +1139,42 @@ export default function Home() {
           -webkit-line-clamp: 4;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+
+        .file-drop-zone {
+          width: 100%;
+          padding: 12px 16px;
+          border-radius: 10px;
+          border: 1.5px dashed var(--border-hover);
+          background: transparent;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .file-drop-zone:hover {
+          border-color: var(--border-accent);
+          background: var(--bg-input);
+        }
+        .file-drop-zone-active {
+          border-color: var(--accent) !important;
+          background: rgba(0, 255, 136, 0.03) !important;
+        }
+        [data-theme="light"] .file-drop-zone-active {
+          background: rgba(5, 150, 105, 0.05) !important;
+        }
+
+        .file-chip {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 10px;
+          border-radius: 8px;
+          background: var(--bg-input);
+          border: 1px solid var(--border-inner);
+          transition: border-color 0.15s;
+        }
+        .file-chip:hover {
+          border-color: var(--border-hover);
         }
       `}</style>
     </>

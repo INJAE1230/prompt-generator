@@ -1,6 +1,13 @@
 import { NextRequest } from "next/server";
+import { extractText, isNativeMedia, getMediaType } from "@/lib/parse-file";
 
 export const dynamic = "force-dynamic";
+
+interface FilePayload {
+  name: string;
+  type: string;
+  data: string;
+}
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -12,7 +19,24 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { systemPrompt, userMessage } = await req.json();
+    const { systemPrompt, userMessage, files = [] } = await req.json();
+
+    const parts: unknown[] = [];
+
+    for (const file of files as FilePayload[]) {
+      if (isNativeMedia(file)) {
+        parts.push({
+          inline_data: { mime_type: getMediaType(file), data: file.data },
+        });
+      } else {
+        const text = await extractText(file);
+        if (text) {
+          parts.push({ text: `[첨부파일: ${file.name}]\n${text}` });
+        }
+      }
+    }
+
+    parts.push({ text: systemPrompt + "\n\n" + userMessage });
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
@@ -20,12 +44,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: systemPrompt + "\n\n" + userMessage }],
-            },
-          ],
+          contents: [{ role: "user", parts }],
         }),
       }
     );

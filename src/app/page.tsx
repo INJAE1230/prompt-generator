@@ -73,6 +73,24 @@ const OPTIONS: Option[] = [
   { id: "markdown", emoji: "📝", label: "마크다운", instruction: "마크다운 문법(제목, 볼드, 코드블록 등)을 활용하세요" },
 ];
 
+const MODEL_STYLES: Record<string, { active: string; dot: string; badge: string }> = {
+  claude: {
+    active: "bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/30",
+    dot: "bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.3)]",
+    badge: "bg-orange-500/15 text-orange-400",
+  },
+  gemini: {
+    active: "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30",
+    dot: "bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.3)]",
+    badge: "bg-blue-500/15 text-blue-400",
+  },
+  purple: {
+    active: "bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30",
+    dot: "bg-purple-400",
+    badge: "bg-purple-500/15 text-purple-400",
+  },
+};
+
 function MatrixBg({ theme }: { theme: Theme }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -162,7 +180,7 @@ export default function Home() {
   const [compareResult, setCompareResult] = useState({ claude: "", gemini: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [tab, setTab] = useState<Tab>("main");
   const [favorites, setFavorites] = useState<Favorite[]>([]);
@@ -171,6 +189,8 @@ export default function Home() {
   const [compareMeta, setCompareMeta] = useState<{ claude: StreamMeta | null; gemini: StreamMeta | null }>({ claude: null, gemini: null });
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState("");
+  const [savedToast, setSavedToast] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -359,12 +379,34 @@ export default function Home() {
     }
   };
 
-  const copyToClipboard = async (text: string) => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const copyToClipboard = async (text: string, id?: string) => {
+    await navigator.clipboard.writeText(text);
+    const key = id || text.slice(0, 30);
+    setCopiedId(key);
+    setTimeout(() => setCopiedId(""), 2000);
+  };
   const addFavorite = (text: string, mdl: string) => {
     const fav: Favorite = { id: Date.now().toString(), purpose: currentPurpose?.label || "", input: userInput, result: text, model: mdl, timestamp: Date.now() };
     saveFavorites([fav, ...favorites]);
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
   };
-  const removeFavorite = (id: string) => saveFavorites(favorites.filter((f) => f.id !== id));
+  const removeFavorite = (id: string) => {
+    if (confirmDeleteId === id) {
+      saveFavorites(favorites.filter((f) => f.id !== id));
+      setConfirmDeleteId("");
+    } else {
+      setConfirmDeleteId(id);
+      setTimeout(() => setConfirmDeleteId(""), 3000);
+    }
+  };
+  const loadFavorite = (fav: Favorite) => {
+    const purpose = PURPOSES.find(p => p.label === fav.purpose);
+    if (purpose) setSelectedPurpose(purpose.id);
+    setUserInput(fav.input);
+    setModel(fav.model === "claude" ? "claude" : "gemini");
+    setTab("main");
+  };
   const exportFile = useCallback((text: string, format: "txt" | "md") => {
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -377,9 +419,9 @@ export default function Home() {
     );
   };
 
-  const ResultActions = ({ text, mdl }: { text: string; mdl: string }) => (
+  const ResultActions = ({ text, mdl, copyKey }: { text: string; mdl: string; copyKey: string }) => (
     <div className="flex flex-wrap gap-2 mt-3">
-      <button onClick={() => copyToClipboard(text)} className="btn-sm">{copied ? "복사됨 ✓" : "복사"}</button>
+      <button onClick={() => copyToClipboard(text, copyKey)} className="btn-sm">{copiedId === copyKey ? "복사됨 ✓" : "복사"}</button>
       <button onClick={generate} disabled={loading} className="btn-sm disabled:opacity-30">재생성</button>
       <button onClick={() => addFavorite(text, mdl)} className="btn-sm btn-fav">★ 저장</button>
       <button onClick={() => exportFile(text, "txt")} className="btn-sm">.txt</button>
@@ -442,7 +484,7 @@ export default function Home() {
                 </div>
                 <div className="w-px h-3" style={{ background: "var(--border)" }} />
                 <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${model === "claude" ? "bg-orange-400" : "bg-blue-400"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${MODEL_STYLES[model].dot}`} />
                   <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
                     {compareMode ? "COMPARE" : model.toUpperCase()}
                   </span>
@@ -457,7 +499,7 @@ export default function Home() {
                   </button>
                   <button onClick={() => setTab("favorites")} className="tab-btn" data-active={tab === "favorites"}>
                     <span className="hidden sm:inline">즐겨찾기</span>
-                    <span className="sm:hidden">★</span>
+                    <span className="sm:hidden">저장</span>
                     {favorites.length > 0 && (
                       <span className="mono text-[10px] ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15" style={{ color: "var(--accent)" }}>
                         {favorites.length}
@@ -693,15 +735,20 @@ export default function Home() {
                   <div key={fav.id} className="card p-5 fade-up">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
-                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${fav.model === "claude" ? "bg-orange-500/15 text-orange-400" : "bg-blue-500/15 text-blue-400"}`}>
+                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[fav.model]?.badge || MODEL_STYLES.gemini.badge}`}>
                           {fav.model.toUpperCase()}
                         </span>
                         <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{fav.purpose}</span>
                         <span className="text-sm" style={{ color: "var(--text-dim)" }}>{new Date(fav.timestamp).toLocaleDateString("ko")}</span>
                       </div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => copyToClipboard(fav.result)} className="btn-sm text-xs">복사</button>
-                        <button onClick={() => removeFavorite(fav.id)} className="btn-sm btn-danger text-xs">삭제</button>
+                        <button onClick={() => loadFavorite(fav)} className="btn-sm text-xs">불러오기</button>
+                        <button onClick={() => copyToClipboard(fav.result, `fav-${fav.id}`)} className="btn-sm text-xs">
+                          {copiedId === `fav-${fav.id}` ? "복사됨 ✓" : "복사"}
+                        </button>
+                        <button onClick={() => removeFavorite(fav.id)} className="btn-sm btn-danger text-xs">
+                          {confirmDeleteId === fav.id ? "확인?" : "삭제"}
+                        </button>
                       </div>
                     </div>
                     <p className="text-sm mb-2 truncate" style={{ color: "var(--text-dim)" }}>{fav.input}</p>
@@ -723,29 +770,29 @@ export default function Home() {
                 <label className="label">모델 선택</label>
                 <div className="flex gap-2 mt-2">
                   {[
-                    { key: "claude" as Model, name: "Claude", color: "orange" },
-                    { key: "gemini" as Model, name: "Gemini", color: "blue" },
+                    { key: "claude" as Model, name: "Claude" },
+                    { key: "gemini" as Model, name: "Gemini" },
                   ].map((m) => (
                     <button
                       key={m.key}
                       onClick={() => { setModel(m.key); setCompareMode(false); }}
                       className={`flex-1 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
                         model === m.key && !compareMode
-                          ? `bg-${m.color}-500/15 text-${m.color}-400 ring-1 ring-${m.color}-500/30`
+                          ? MODEL_STYLES[m.key].active
                           : "model-btn-inactive"
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${model === m.key && !compareMode ? `bg-${m.color}-400 shadow-[0_0_6px_rgba(0,0,0,0.3)]` : ""}`} style={{ background: model === m.key && !compareMode ? undefined : "var(--text-dim)" }} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${model === m.key && !compareMode ? MODEL_STYLES[m.key].dot : ""}`} style={{ background: model === m.key && !compareMode ? undefined : "var(--text-dim)" }} />
                       {m.name}
                     </button>
                   ))}
                   <button
                     onClick={() => setCompareMode(!compareMode)}
                     className={`px-5 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
-                      compareMode ? "bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30" : "model-btn-inactive"
+                      compareMode ? MODEL_STYLES.purple.active : "model-btn-inactive"
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${compareMode ? "bg-purple-400" : ""}`} style={{ background: compareMode ? undefined : "var(--text-dim)" }} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${compareMode ? MODEL_STYLES.purple.dot : ""}`} style={{ background: compareMode ? undefined : "var(--text-dim)" }} />
                     비교
                   </button>
                 </div>
@@ -779,10 +826,24 @@ export default function Home() {
                     <textarea
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && userInput.trim() && !loading) {
+                          e.preventDefault();
+                          generate();
+                        }
+                      }}
                       placeholder={currentPurpose.placeholder}
                       rows={5}
                       className="input-area"
                     />
+                    <div className="flex justify-between items-center mt-1.5 px-1">
+                      <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>
+                        Ctrl+Enter로 생성
+                      </span>
+                      <span className="mono text-[11px]" style={{ color: userInput.length > 2000 ? "#ef4444" : "var(--text-dim)" }}>
+                        {userInput.length.toLocaleString()}자
+                      </span>
+                    </div>
                   </div>
 
                   {/* File attachment */}
@@ -909,26 +970,36 @@ export default function Home() {
             {/* RIGHT */}
             <div ref={resultRef} className="lg:col-span-7 space-y-4">
               {error && (
-                <div className="card card-error p-4 fade-up">
+                <div className="card card-error p-4 fade-up flex items-start justify-between gap-3">
                   <p className="text-red-400 text-base">{error}</p>
+                  <button onClick={() => setError("")} className="text-red-400/60 hover:text-red-400 text-lg flex-shrink-0 leading-none mt-0.5">&times;</button>
                 </div>
               )}
 
               {/* Single result (streaming) */}
               {result && !compareMode && (
                 <div className="card p-5 fade-up">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${model === "claude" ? "bg-orange-500/15 text-orange-400" : "bg-blue-500/15 text-blue-400"}`}>
-                      {model.toUpperCase()}
-                    </span>
-                    <span className="text-sm" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[model].badge}`}>
+                        {model.toUpperCase()}
+                      </span>
+                      <span className="text-sm" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
+                    </div>
+                    <button
+                      onClick={() => { setResult(""); setMeta(null); }}
+                      className="text-xs px-2 py-1 rounded-md hover:bg-[var(--bg-input)] transition-colors"
+                      style={{ color: "var(--text-dim)" }}
+                    >
+                      초기화
+                    </button>
                   </div>
-                  <div className="result-box">
+                  <div className="result-box max-h-[600px] overflow-y-auto">
                     <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
                       {result}{loading && <span className="cursor-blink" />}
                     </div>
                   </div>
-                  {!loading && <ResultActions text={result} mdl={model} />}
+                  {!loading && <ResultActions text={result} mdl={model} copyKey="single" />}
                   {!loading && meta && <MetaInfo meta={meta} />}
                 </div>
               )}
@@ -936,13 +1007,22 @@ export default function Home() {
               {/* Compare results (streaming) */}
               {compareMode && (compareResult.claude || compareResult.gemini) && (
                 <div className="space-y-4 fade-up">
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => { setCompareResult({ claude: "", gemini: "" }); setCompareMeta({ claude: null, gemini: null }); }}
+                      className="text-xs px-2 py-1 rounded-md hover:bg-[var(--bg-input)] transition-colors"
+                      style={{ color: "var(--text-dim)" }}
+                    >
+                      초기화
+                    </button>
+                  </div>
                   {[
-                    { key: "claude" as const, label: "CLAUDE", color: "orange" },
-                    { key: "gemini" as const, label: "GEMINI", color: "blue" },
+                    { key: "claude" as const, label: "CLAUDE" },
+                    { key: "gemini" as const, label: "GEMINI" },
                   ].map((m) => (
                     <div key={m.key} className="card p-5">
                       <div className="flex items-center gap-2 mb-4">
-                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium bg-${m.color}-500/15 text-${m.color}-400`}>{m.label}</span>
+                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[m.key].badge}`}>{m.label}</span>
                         {loading && !compareResult[m.key] && (
                           <span className="text-sm" style={{ color: "var(--text-dim)" }}>연결 중...</span>
                         )}
@@ -954,7 +1034,7 @@ export default function Home() {
                               {compareResult[m.key]}{loading && !compareMeta[m.key] && <span className="cursor-blink" />}
                             </div>
                           </div>
-                          {!loading && <ResultActions text={compareResult[m.key]} mdl={m.key} />}
+                          {!loading && <ResultActions text={compareResult[m.key]} mdl={m.key} copyKey={m.key} />}
                           {compareMeta[m.key] && <MetaInfo meta={compareMeta[m.key]!} />}
                         </>
                       ) : loading ? (
@@ -998,14 +1078,22 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-12 text-center">
-            <p className="mono text-xs tracking-wider" style={{ color: "var(--text-dim)" }}>
-              PROMPT_GENERATOR v1.0 — {new Date().getFullYear()}
-            </p>
-          </div>
         </div>
         )}
+
+        <div className="mt-12 pb-8 text-center">
+          <p className="mono text-xs tracking-wider" style={{ color: "var(--text-dim)" }}>
+            PROMPT_GENERATOR v1.0 — {new Date().getFullYear()}
+          </p>
+        </div>
       </div>
+
+      {savedToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium fade-up"
+          style={{ background: "var(--accent)", color: "#000" }}>
+          즐겨찾기에 저장됨
+        </div>
+      )}
 
       <style jsx global>{`
         .card {

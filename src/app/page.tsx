@@ -1,18 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { PURPOSES, OPTIONS } from "@/lib/constants";
+import MatrixBg from "@/components/MatrixBg";
+import GuideTab from "@/components/GuideTab";
+import PasswordModal from "@/components/PasswordModal";
 
 type Model = "claude" | "gemini";
 type Tab = "main" | "favorites" | "guide";
 type Theme = "dark" | "light";
-
-interface Purpose {
-  id: string;
-  emoji: string;
-  label: string;
-  placeholder: string;
-  systemPrompt: string;
-}
 
 interface Favorite {
   id: string;
@@ -38,42 +34,6 @@ interface AttachedFile {
   data: string;
 }
 
-interface Option {
-  id: string;
-  emoji: string;
-  label: string;
-  instruction: string;
-}
-
-const PURPOSES: Purpose[] = [
-  { id: "business-doc", emoji: "📄", label: "업무문서", placeholder: "프로젝트 제안서, 기획안 등 작성할 문서의 종류와 핵심 내용", systemPrompt: "당신은 비즈니스 문서 작성 전문가입니다. 명확하고 전문적인 업무 문서를 위한 프롬프트를 작성하세요. 문서 구조, 핵심 포함 요소, 톤앤매너, 분량 가이드를 포함하세요." },
-  { id: "email", emoji: "📧", label: "이메일", placeholder: "수신자, 목적, 핵심 전달 사항, 원하는 톤", systemPrompt: "당신은 비즈니스 커뮤니케이션 전문가입니다. 목적에 맞는 효과적인 이메일을 위한 프롬프트를 작성하세요. 수신자 맞춤 톤, 구조, CTA를 포함하세요." },
-  { id: "report", emoji: "📊", label: "보고서", placeholder: "보고서 주제, 대상 독자, 포함할 데이터/분석 항목", systemPrompt: "당신은 보고서 작성 전문가입니다. 데이터 기반의 체계적인 보고서를 위한 프롬프트를 작성하세요. 분석 프레임워크, 시각화 제안, 결론 도출 방법을 포함하세요." },
-  { id: "excel", emoji: "📐", label: "엑셀수식", placeholder: "처리할 데이터 유형, 원하는 계산/변환, 시트 구조", systemPrompt: "당신은 Excel/스프레드시트 전문가입니다. 복잡한 엑셀 수식, 매크로, 데이터 처리를 위한 프롬프트를 작성하세요. 함수 조합, 조건부 로직, 오류 처리를 포함하세요." },
-  { id: "official-doc", emoji: "🏛️", label: "공문서", placeholder: "공문서 종류, 발신/수신 기관, 핵심 내용", systemPrompt: "당신은 공문서 작성 전문가입니다. 정부/공공기관 형식에 맞는 공식 문서를 위한 프롬프트를 작성하세요. 법적 용어, 격식체, 필수 구성 요소를 포함하세요." },
-  { id: "meeting", emoji: "📝", label: "회의록", placeholder: "회의 주제, 참석자, 주요 안건, 결정 사항 형식", systemPrompt: "당신은 회의 기록 전문가입니다. 체계적이고 활용도 높은 회의록을 위한 프롬프트를 작성하세요. 안건별 정리, 액션 아이템, 후속 조치를 포함하세요." },
-  { id: "trade", emoji: "📈", label: "트레이드", placeholder: "자산 종류, 전략 유형, 분석할 지표", systemPrompt: "당신은 퀀트 트레이더입니다. 매매전략, 기술적 분석, 진입/청산 조건을 포함한 프롬프트를 작성하세요. 리스크 관리, 포지션 사이징, 백테스트 조건을 포함하세요." },
-  { id: "claude-code", emoji: "💻", label: "클로드코드", placeholder: "개발할 기능, 사용 기술스택, 프로젝트 구조", systemPrompt: "당신은 Claude Code 전문가입니다. 명확한 개발 지시, 파일구조, 기술스택을 포함한 프롬프트를 작성하세요. 단계별 구현 지시, 에러 처리, 테스트 요구사항을 포함하세요." },
-  { id: "roblox", emoji: "🎮", label: "로블록스 Lua", placeholder: "게임 장르, 필요한 기능, 게임 메카닉", systemPrompt: "당신은 Roblox 게임 개발 전문가입니다. Lua 스크립트, Roblox API, 게임 로직을 포함한 프롬프트를 작성하세요. 서버/클라이언트 구분, 보안, 성능 최적화를 포함하세요." },
-  { id: "contract", emoji: "📜", label: "계약서", placeholder: "계약 종류(금전소비대차/가맹/임대차/근로계약 등), 당사자, 핵심 조건", systemPrompt: "당신은 계약서 작성 및 법률 문서 전문가입니다. 계약 유형에 맞는 정확한 법적 구조와 조항을 포함한 프롬프트를 작성하세요. 반드시 최신 개정 법령(민법, 상법, 근로기준법, 주택임대차보호법, 가맹사업법 등)을 기준으로 하고, 계약 당사자의 권리·의무, 계약 기간, 해지 조건, 손해배상, 분쟁 해결 조항, 특약사항을 빠짐없이 포함하세요. 관련 법조항 번호를 명시하고, 최근 법 개정 사항이 있을 경우 반영 여부를 확인하도록 안내하세요." },
-  { id: "other", emoji: "✏️", label: "기타", placeholder: "원하는 프롬프트의 목적과 세부 요구사항을 자유롭게 입력하세요", systemPrompt: "당신은 AI 프롬프트 엔지니어링 전문가입니다. 사용자의 요구에 맞는 최적화된 프롬프트를 작성하세요. 명확한 역할 설정, 구체적 지시사항, 출력 형식, 제약 조건을 포함하세요." },
-];
-
-const OPTIONS: Option[] = [
-  { id: "detailed", emoji: "📋", label: "상세하게", instruction: "가능한 한 상세하고 구체적으로 작성하세요" },
-  { id: "step-by-step", emoji: "🔢", label: "단계별로", instruction: "단계별로 구분하여 체계적으로 작성하세요" },
-  { id: "with-examples", emoji: "💡", label: "예시 포함", instruction: "적절한 예시를 포함하세요" },
-  { id: "list-format", emoji: "📑", label: "표/목록 형식", instruction: "표나 목록 형식을 활용하세요" },
-  { id: "simple", emoji: "🐣", label: "쉬운 말로", instruction: "전문 용어를 피하고 쉬운 말로 작성하세요" },
-  { id: "concise", emoji: "⚡", label: "간결하게", instruction: "핵심만 간결하게 작성하세요" },
-  { id: "korean", emoji: "KR", label: "한국어로", instruction: "반드시 한국어로 작성하세요" },
-  { id: "expert", emoji: "🎓", label: "전문가 수준", instruction: "해당 분야 전문가 수준의 깊이로 작성하세요" },
-  { id: "english", emoji: "EN", label: "영어로", instruction: "반드시 영어로 작성하세요" },
-  { id: "compare", emoji: "🔄", label: "비교/대조", instruction: "비교와 대조 구조를 활용하여 작성하세요" },
-  { id: "qna", emoji: "❓", label: "Q&A 형식", instruction: "질문과 답변 형식으로 구성하세요" },
-  { id: "markdown", emoji: "📝", label: "마크다운", instruction: "마크다운 문법(제목, 볼드, 코드블록 등)을 활용하세요" },
-];
-
 const MODEL_STYLES: Record<string, { active: string; dot: string; badge: string }> = {
   claude: {
     active: "bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/30",
@@ -91,50 +51,6 @@ const MODEL_STYLES: Record<string, { active: string; dot: string; badge: string 
     badge: "bg-purple-500/15 text-purple-400",
   },
 };
-
-function MatrixBg({ theme }: { theme: Theme }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const fontSize = 12;
-    const columns = Math.floor(canvas.width / (fontSize * 2));
-    const drops: number[] = Array(columns).fill(0).map(() => Math.random() * -100);
-
-    const draw = () => {
-      const bgAlpha = theme === "dark" ? "rgba(10,10,15,0.15)" : "rgba(244,245,247,0.2)";
-      ctx.fillStyle = bgAlpha;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${fontSize}px JetBrains Mono`;
-
-      for (let i = 0; i < drops.length; i++) {
-        if (Math.random() > 0.98) {
-          const text = "01"[Math.floor(Math.random() * 2)];
-          const x = i * fontSize * 2;
-          const y = drops[i] * fontSize;
-          const alpha = theme === "dark" ? Math.random() * 0.06 + 0.01 : Math.random() * 0.04 + 0.005;
-          ctx.fillStyle = theme === "dark" ? `rgba(0,255,136,${alpha})` : `rgba(0,168,86,${alpha})`;
-          ctx.fillText(text, x, y);
-        }
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.99) drops[i] = 0;
-        drops[i] += 0.5;
-      }
-    };
-
-    const interval = setInterval(draw, 80);
-    return () => { clearInterval(interval); window.removeEventListener("resize", resize); };
-  }, [theme]);
-
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none opacity-60" style={{ zIndex: 0 }} />;
-}
 
 async function readStream(
   response: Response,
@@ -164,7 +80,9 @@ async function readStream(
           if (data.type === "text") onText(data.content);
           else if (data.type === "done") onDone(data);
           else if (data.type === "error") onError(data.message);
-        } catch {}
+        } catch (err) {
+          console.error("readStream: SSE JSON 파싱 오류:", err);
+        }
       }
     }
   } finally {
@@ -173,6 +91,7 @@ async function readStream(
 }
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
   const [model, setModel] = useState<Model>("gemini");
   const [selectedPurpose, setSelectedPurpose] = useState("");
@@ -196,6 +115,8 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("prompt-auth-token");
+    if (token) setIsAuthenticated(true);
     const saved = localStorage.getItem("prompt-favorites");
     if (saved) setFavorites(JSON.parse(saved));
     const savedTheme = localStorage.getItem("prompt-theme") as Theme;
@@ -299,6 +220,12 @@ export default function Home() {
       return;
     }
 
+    const token = localStorage.getItem("prompt-auth-token") || "";
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "x-access-token": token,
+    };
+
     const startTime = Date.now();
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
@@ -317,11 +244,17 @@ export default function Home() {
       }
     };
 
+    const handleUnauth = () => {
+      localStorage.removeItem("prompt-auth-token");
+      setIsAuthenticated(false);
+      setLoading(false);
+    };
+
     try {
       if (compareMode) {
         const [claudeRes, geminiRes] = await Promise.allSettled([
-          fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr }),
-          fetch("/api/gemini", { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr }),
+          fetch("/api/claude", { method: "POST", headers: authHeaders, body: bodyStr }),
+          fetch("/api/gemini", { method: "POST", headers: authHeaders, body: bodyStr }),
         ]);
 
         const readModelStream = async (
@@ -333,6 +266,10 @@ export default function Home() {
             return;
           }
           const response = settled.value;
+          if (response.status === 401) {
+            handleUnauth();
+            return;
+          }
           if (!response.ok) {
             const msg = await safeParseError(response);
             setCompareResult(prev => ({ ...prev, [key]: msg }));
@@ -357,7 +294,11 @@ export default function Home() {
           readModelStream(geminiRes, "gemini"),
         ]);
       } else {
-        const res = await fetch(`/api/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr });
+        const res = await fetch(`/api/${model}`, { method: "POST", headers: authHeaders, body: bodyStr });
+        if (res.status === 401) {
+          handleUnauth();
+          return;
+        }
         if (!res.ok) {
           throw new Error(await safeParseError(res));
         }
@@ -454,646 +395,473 @@ export default function Home() {
     <>
       <MatrixBg theme={theme} />
 
-      <div className="relative z-10 min-h-screen">
-        {/* ═══ HEADER ═══ */}
-        <header className="sticky top-0 z-50 backdrop-blur-xl border-b" style={{ background: "var(--header-bg)", borderColor: "var(--border)" }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="h-[2px] -mx-4 sm:-mx-6 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40" />
-            </div>
+      {!isAuthenticated ? (
+        <PasswordModal
+          onSuccess={(t) => {
+            localStorage.setItem("prompt-auth-token", t);
+            setIsAuthenticated(true);
+          }}
+        />
+      ) : (
+        <>
+          <div className="relative z-10 min-h-screen">
+            {/* ═══ HEADER ═══ */}
+            <header className="sticky top-0 z-50 backdrop-blur-xl border-b" style={{ background: "var(--header-bg)", borderColor: "var(--border)" }}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                <div className="h-[2px] -mx-4 sm:-mx-6 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40" />
+                </div>
 
-            <div className="h-16 flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
-                  <span className="mono font-bold text-base sm:text-lg" style={{ color: "var(--accent)" }}>P</span>
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
-                </div>
-                <div>
-                  <h1 className="text-lg sm:text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
-                    Prompt Generator
-                  </h1>
-                  <p className="mono text-[10px] sm:text-xs tracking-widest hidden sm:block" style={{ color: "var(--text-dim)" }}>
-                    AI-POWERED · v1.0
-                  </p>
-                </div>
-              </div>
+                <div className="h-16 flex items-center justify-between">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 ring-1 ring-[var(--accent)]/20">
+                      <span className="mono font-bold text-base sm:text-lg" style={{ color: "var(--accent)" }}>P</span>
+                      <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
+                    </div>
+                    <div>
+                      <h1 className="text-lg sm:text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
+                        Prompt Generator
+                      </h1>
+                      <p className="mono text-[10px] sm:text-xs tracking-widest hidden sm:block" style={{ color: "var(--text-dim)" }}>
+                        AI-POWERED · v1.0
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="hidden lg:flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
-                  <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>SYSTEM ONLINE</span>
-                </div>
-                <div className="w-px h-3" style={{ background: "var(--border)" }} />
-                <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${MODEL_STYLES[model].dot}`} />
-                  <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
-                    {compareMode ? "COMPARE" : model.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 sm:gap-2">
-                <nav className="flex gap-1 mr-1 sm:mr-2">
-                  <button onClick={() => setTab("main")} className="tab-btn" data-active={tab === "main"}>
-                    <span className="hidden sm:inline">생성기</span>
-                    <span className="sm:hidden">생성</span>
-                  </button>
-                  <button onClick={() => setTab("favorites")} className="tab-btn" data-active={tab === "favorites"}>
-                    <span className="hidden sm:inline">즐겨찾기</span>
-                    <span className="sm:hidden">저장</span>
-                    {favorites.length > 0 && (
-                      <span className="mono text-[10px] ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15" style={{ color: "var(--accent)" }}>
-                        {favorites.length}
+                  <div className="hidden lg:flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
+                      <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>SYSTEM ONLINE</span>
+                    </div>
+                    <div className="w-px h-3" style={{ background: "var(--border)" }} />
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${MODEL_STYLES[model].dot}`} />
+                      <span className="mono text-xs" style={{ color: "var(--text-dim)" }}>
+                        {compareMode ? "COMPARE" : model.toUpperCase()}
                       </span>
-                    )}
-                  </button>
-                  <button onClick={() => setTab("guide")} className="tab-btn" data-active={tab === "guide"}>
-                    <span className="hidden sm:inline">가이드</span>
-                    <span className="sm:hidden">?</span>
-                  </button>
-                </nav>
-
-                <div className="w-px h-5" style={{ background: "var(--border)" }} />
-
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-                  style={{ background: "var(--bg-input)" }}
-                  title={theme === "dark" ? "라이트 모드" : "다크 모드"}
-                >
-                  {theme === "dark" ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-dim)" }}>
-                      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-dim)" }}>
-                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* ═══ GUIDE TAB ═══ */}
-        {tab === "guide" ? (
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-            {/* 사용법 */}
-            <div className="card p-6 fade-up">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>사용법</h2>
-              <div className="space-y-4">
-                {[
-                  { step: "1", title: "모델 선택", desc: "Claude 또는 Gemini 중 원하는 AI 모델을 선택하세요. '비교' 버튼을 누르면 두 모델의 결과를 동시에 볼 수 있습니다." },
-                  { step: "2", title: "사용 목적 선택", desc: "프롬프트의 용도에 맞는 카테고리를 선택하세요. 목적에 따라 AI가 더 정확한 프롬프트를 만들어 줍니다." },
-                  { step: "3", title: "세부 조건 입력", desc: "만들고 싶은 프롬프트의 내용을 자유롭게 적어주세요. 구체적일수록 결과가 좋아집니다." },
-                  { step: "4", title: "추가 옵션 선택", desc: "원하는 스타일이나 형식을 선택하세요. 여러 개를 동시에 고를 수 있습니다." },
-                  { step: "5", title: "GENERATE", desc: "버튼을 누르면 AI가 최적화된 프롬프트를 실시간으로 생성합니다." },
-                ].map((item) => (
-                  <div key={item.step} className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mono text-sm font-bold" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>
-                      {item.step}
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold" style={{ color: "var(--text)" }}>{item.title}</p>
-                      <p className="text-sm mt-0.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{item.desc}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* 사용 목적 설명 */}
-            <div className="card p-6 fade-up">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>사용 목적</h2>
-              <div className="space-y-2.5">
-                {PURPOSES.map((p) => (
-                  <div key={p.id} className="flex items-start gap-3 py-2.5 px-3 rounded-lg" style={{ background: "var(--bg-input)" }}>
-                    <span className="text-lg flex-shrink-0 mt-0.5">{p.emoji}</span>
-                    <div>
-                      <p className="text-base font-semibold" style={{ color: "var(--text)" }}>{p.label}</p>
-                      <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>{p.placeholder}</p>
-                    </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <nav className="flex gap-1 mr-1 sm:mr-2">
+                      <button onClick={() => setTab("main")} className="tab-btn" data-active={tab === "main"}>
+                        <span className="hidden sm:inline">생성기</span>
+                        <span className="sm:hidden">생성</span>
+                      </button>
+                      <button onClick={() => setTab("favorites")} className="tab-btn" data-active={tab === "favorites"}>
+                        <span className="hidden sm:inline">즐겨찾기</span>
+                        <span className="sm:hidden">저장</span>
+                        {favorites.length > 0 && (
+                          <span className="mono text-[10px] ml-1 px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15" style={{ color: "var(--accent)" }}>
+                            {favorites.length}
+                          </span>
+                        )}
+                      </button>
+                      <button onClick={() => setTab("guide")} className="tab-btn" data-active={tab === "guide"}>
+                        <span className="hidden sm:inline">가이드</span>
+                        <span className="sm:hidden">?</span>
+                      </button>
+                    </nav>
+
+                    <div className="w-px h-5" style={{ background: "var(--border)" }} />
+
+                    <button
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                      style={{ background: "var(--bg-input)" }}
+                      title={theme === "dark" ? "라이트 모드" : "다크 모드"}
+                    >
+                      {theme === "dark" ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-dim)" }}>
+                          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-dim)" }}>
+                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                      )}
+                    </button>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
+            </header>
 
-            {/* 추가 옵션 설명 */}
-            <div className="card p-6 fade-up">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>추가 옵션</h2>
-              <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                여러 개를 동시에 선택할 수 있습니다. 선택한 옵션이 프롬프트 생성에 반영됩니다.<br/>
-                옵션을 조합하면 더 정교한 프롬프트를 만들 수 있습니다.
-              </p>
-              <div className="space-y-3">
-                {[
-                  {
-                    id: "detailed", emoji: "📋", label: "상세하게",
-                    desc: "AI가 프롬프트를 최대한 구체적이고 상세하게 작성합니다. 배경 설명, 세부 조건, 예외 사항 등을 빠짐없이 포함시킵니다.",
-                    when: "복잡한 업무나 여러 조건이 있는 문서를 만들 때",
-                    tip: "\"단계별로\"와 함께 사용하면 체계적이면서도 빈틈없는 프롬프트가 됩니다.",
-                    pair: ["step-by-step", "expert"],
-                  },
-                  {
-                    id: "step-by-step", emoji: "🔢", label: "단계별로",
-                    desc: "프롬프트를 순차적인 단계로 나누어 구성합니다. 1단계, 2단계... 형태로 작업 순서를 명확히 합니다.",
-                    when: "절차가 중요한 작업이나 순서대로 진행해야 하는 과정을 설명할 때",
-                    tip: "엑셀수식, 클로드코드 등 기술적 목적에서 특히 효과적입니다.",
-                    pair: ["detailed", "with-examples"],
-                  },
-                  {
-                    id: "with-examples", emoji: "💡", label: "예시 포함",
-                    desc: "프롬프트에 구체적인 입출력 예시를 포함시킵니다. AI가 원하는 결과의 형태를 더 정확히 이해하게 됩니다.",
-                    when: "원하는 결과물의 형태를 명확히 보여주고 싶을 때",
-                    tip: "모든 목적과 잘 어울리며, 특히 이메일/공문서처럼 형식이 중요한 경우 필수입니다.",
-                    pair: ["detailed", "list-format"],
-                  },
-                  {
-                    id: "list-format", emoji: "📑", label: "표/목록 형식",
-                    desc: "결과물을 표(테이블)나 불릿 목록 형태로 정리하도록 유도합니다. 정보를 한눈에 비교하거나 체크리스트로 활용할 수 있습니다.",
-                    when: "비교 분석, 항목 정리, 체크리스트가 필요할 때",
-                    tip: "보고서, 회의록 작성 시 가독성을 크게 높여줍니다.",
-                    pair: ["compare", "markdown"],
-                  },
-                  {
-                    id: "simple", emoji: "🐣", label: "쉬운 말로",
-                    desc: "전문 용어를 피하고 누구나 이해할 수 있는 쉬운 표현을 사용합니다. 초보자나 비전문가도 따라할 수 있도록 풀어서 설명합니다.",
-                    when: "다양한 수준의 독자를 대상으로 할 때, 또는 교육/안내 자료를 만들 때",
-                    tip: "\"전문가 수준\"과는 반대 효과이므로 동시 선택을 피하세요.",
-                    pair: ["step-by-step", "with-examples"],
-                  },
-                  {
-                    id: "concise", emoji: "⚡", label: "간결하게",
-                    desc: "핵심만 남기고 불필요한 설명을 모두 제거합니다. 짧고 임팩트 있는 프롬프트를 만듭니다.",
-                    when: "빠른 결과가 필요하거나 토큰을 절약하고 싶을 때",
-                    tip: "\"상세하게\"와는 반대 효과입니다. 이메일, 보고서 요약에 적합합니다.",
-                    pair: ["list-format"],
-                  },
-                  {
-                    id: "korean", emoji: "KR", label: "한국어로",
-                    desc: "프롬프트 전체를 한국어로 작성하도록 강제합니다. 기본적으로 한국어가 사용되지만, 영어 전문용어가 많은 분야에서 확실한 한국어 출력을 보장합니다.",
-                    when: "한국어 결과물이 반드시 필요할 때, 영어 혼용을 방지하고 싶을 때",
-                    tip: "\"영어로\" 옵션과 동시에 선택하면 충돌하므로 주의하세요.",
-                    pair: ["simple"],
-                  },
-                  {
-                    id: "expert", emoji: "🎓", label: "전문가 수준",
-                    desc: "해당 분야의 전문가가 사용하는 깊이 있는 용어와 개념을 활용합니다. 학술적/기술적으로 높은 수준의 프롬프트를 생성합니다.",
-                    when: "전문가 대상 문서, 기술 보고서, 학술 자료를 만들 때",
-                    tip: "트레이드, 클로드코드, 엑셀수식 등 전문 분야와 조합하면 효과적입니다.",
-                    pair: ["detailed", "with-examples"],
-                  },
-                  {
-                    id: "english", emoji: "EN", label: "영어로",
-                    desc: "프롬프트 전체를 영어로 작성합니다. 해외 협업, 영문 이메일, 글로벌 문서 작성에 활용됩니다.",
-                    when: "영어 결과물이 필요하거나 영어권 AI에게 전달할 프롬프트를 만들 때",
-                    tip: "\"한국어로\" 옵션과 동시에 선택하면 충돌하므로 주의하세요.",
-                    pair: ["expert"],
-                  },
-                  {
-                    id: "compare", emoji: "🔄", label: "비교/대조",
-                    desc: "두 가지 이상의 대상을 비교·대조하는 구조로 프롬프트를 구성합니다. 장단점, 차이점, 공통점을 체계적으로 분석합니다.",
-                    when: "선택지 비교, 기술 비교, 정책 비교 등 의사결정이 필요한 상황",
-                    tip: "\"표/목록 형식\"과 함께 사용하면 비교표가 포함되어 더 직관적입니다.",
-                    pair: ["list-format", "detailed"],
-                  },
-                  {
-                    id: "qna", emoji: "❓", label: "Q&A 형식",
-                    desc: "질문과 답변이 번갈아 나오는 형식으로 프롬프트를 구성합니다. FAQ, 인터뷰, 교육 자료에 적합합니다.",
-                    when: "FAQ 문서, 교육 콘텐츠, 인터뷰 스크립트를 만들 때",
-                    tip: "\"쉬운 말로\"와 함께 쓰면 초보자용 가이드에 완벽합니다.",
-                    pair: ["simple", "with-examples"],
-                  },
-                  {
-                    id: "markdown", emoji: "📝", label: "마크다운",
-                    desc: "마크다운 문법(제목, 볼드, 코드블록, 인용 등)을 활용한 구조화된 프롬프트를 생성합니다. 결과물을 바로 문서로 활용할 수 있습니다.",
-                    when: "GitHub, Notion 등 마크다운을 지원하는 플랫폼에서 바로 사용할 문서를 만들 때",
-                    tip: "클로드코드 목적에서 특히 유용합니다. 코드블록이 포함된 깔끔한 지시문을 만들 수 있습니다.",
-                    pair: ["list-format", "step-by-step"],
-                  },
-                ].map((opt) => (
-                  <div key={opt.id} className="rounded-xl overflow-hidden" style={{ background: "var(--bg-input)", border: "1px solid var(--border-inner)" }}>
-                    <div className="px-4 py-3.5 flex items-center gap-3">
-                      <span className={`flex-shrink-0 ${opt.id === "korean" || opt.id === "english" ? "mono text-sm font-semibold" : "text-xl"}`} style={opt.id === "korean" || opt.id === "english" ? { color: "var(--text-dim)" } : undefined}>{opt.emoji}</span>
-                      <p className="text-lg font-semibold" style={{ color: "var(--text)" }}>{opt.label}</p>
-                    </div>
-                    <div className="px-4 pb-4 space-y-2.5">
-                      <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{opt.desc}</p>
-                      <div className="flex items-start gap-2">
-                        <span className="mono text-xs px-2 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: "var(--bg-card)", color: "var(--accent)", border: "1px solid var(--border)" }}>추천</span>
-                        <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-dim)" }}>{opt.when}</p>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="mono text-xs px-2 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: "var(--bg-card)", color: "var(--text-dim)", border: "1px solid var(--border)" }}>TIP</span>
-                        <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-dim)" }}>{opt.tip}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 pt-1">
-                        <span className="text-xs" style={{ color: "var(--text-dim)" }}>잘 맞는 조합:</span>
-                        {opt.pair.map((pId) => {
-                          const paired = OPTIONS.find(o => o.id === pId);
-                          return paired ? (
-                            <span key={pId} className="mono text-xs px-2 py-0.5 rounded" style={{ background: "var(--bg-card)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-                              {paired.emoji} {paired.label}
+            {/* ═══ GUIDE TAB ═══ */}
+            {tab === "guide" ? (
+              <GuideTab />
+            ) : tab === "favorites" ? (
+              <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+                {favorites.length === 0 ? (
+                  <div className="card p-12 text-center">
+                    <p className="text-base" style={{ color: "var(--text-secondary)" }}>저장된 프롬프트가 없습니다</p>
+                    <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>생성된 프롬프트에서 ★ 저장을 눌러보세요</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {favorites.map((fav) => (
+                      <div key={fav.id} className="card p-5 fade-up">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[fav.model]?.badge || MODEL_STYLES.gemini.badge}`}>
+                              {fav.model.toUpperCase()}
                             </span>
-                          ) : null;
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 결과 정보 설명 */}
-            <div className="card p-6 fade-up">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>결과 정보</h2>
-              <div className="space-y-3">
-                {[
-                  { label: "모델명", desc: "프롬프트를 생성한 AI 모델 이름" },
-                  { label: "입력 토큰", desc: "내가 입력한 내용의 크기 (한글 1자 ≈ 2~3토큰)" },
-                  { label: "출력 토큰", desc: "AI가 생성한 프롬프트의 크기" },
-                  { label: "응답 시간", desc: "요청부터 생성 완료까지 걸린 시간" },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <span className="mono text-xs px-2 py-0.5 rounded font-medium flex-shrink-0" style={{ background: "var(--bg-input)", color: "var(--accent)", border: "1px solid var(--border)" }}>{item.label}</span>
-                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{item.desc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : tab === "favorites" ? (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-            {favorites.length === 0 ? (
-              <div className="card p-12 text-center">
-                <p className="text-base" style={{ color: "var(--text-secondary)" }}>저장된 프롬프트가 없습니다</p>
-                <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>생성된 프롬프트에서 ★ 저장을 눌러보세요</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {favorites.map((fav) => (
-                  <div key={fav.id} className="card p-5 fade-up">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[fav.model]?.badge || MODEL_STYLES.gemini.badge}`}>
-                          {fav.model.toUpperCase()}
-                        </span>
-                        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{fav.purpose}</span>
-                        <span className="text-sm" style={{ color: "var(--text-dim)" }}>{new Date(fav.timestamp).toLocaleDateString("ko")}</span>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <button onClick={() => loadFavorite(fav)} className="btn-sm text-xs">불러오기</button>
-                        <button onClick={() => copyToClipboard(fav.result, `fav-${fav.id}`)} className="btn-sm text-xs">
-                          {copiedId === `fav-${fav.id}` ? "복사됨 ✓" : "복사"}
-                        </button>
-                        <button onClick={() => removeFavorite(fav.id)} className="btn-sm btn-danger text-xs">
-                          {confirmDeleteId === fav.id ? "확인?" : "삭제"}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm mb-2 truncate" style={{ color: "var(--text-dim)" }}>{fav.input}</p>
-                    <p className="text-base leading-relaxed line-clamp-4" style={{ color: "var(--text-secondary)" }}>{fav.result}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-
-        /* ═══ MAIN TAB ═══ */
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* LEFT */}
-            <div className="lg:col-span-5 space-y-5">
-              {/* Model */}
-              <div className="card p-4">
-                <label className="label">모델 선택</label>
-                <div className="flex gap-2 mt-2">
-                  {[
-                    { key: "claude" as Model, name: "Claude" },
-                    { key: "gemini" as Model, name: "Gemini" },
-                  ].map((m) => (
-                    <button
-                      key={m.key}
-                      onClick={() => { setModel(m.key); setCompareMode(false); }}
-                      className={`flex-1 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
-                        model === m.key && !compareMode
-                          ? MODEL_STYLES[m.key].active
-                          : "model-btn-inactive"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${model === m.key && !compareMode ? MODEL_STYLES[m.key].dot : ""}`} style={{ background: model === m.key && !compareMode ? undefined : "var(--text-dim)" }} />
-                      {m.name}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setCompareMode(!compareMode)}
-                    className={`px-5 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
-                      compareMode ? MODEL_STYLES.purple.active : "model-btn-inactive"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${compareMode ? MODEL_STYLES.purple.dot : ""}`} style={{ background: compareMode ? undefined : "var(--text-dim)" }} />
-                    비교
-                  </button>
-                </div>
-                {compareMode && <p className="text-xs text-purple-400/70 mt-2 fade-up">Claude와 Gemini 결과를 동시에 비교합니다</p>}
-              </div>
-
-              {/* Purpose */}
-              <div className="card p-4">
-                <label className="label">사용 목적</label>
-                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-2.5 mt-2">
-                  {PURPOSES.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setSelectedPurpose(p.id)}
-                      className={`purpose-btn ${selectedPurpose === p.id ? "purpose-btn-active" : ""}`}
-                    >
-                      <span className="text-lg mr-1.5">{p.emoji}</span>
-                      <span className="text-base">{p.label}</span>
-                      {selectedPurpose === p.id && <span className="absolute top-1.5 right-2 text-xs" style={{ color: "var(--accent)" }}>✓</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Input */}
-              {currentPurpose && (
-                <div className="card p-4 fade-up">
-                  <label className="label">세부 조건</label>
-                  <div className="relative mt-2">
-                    <span className="mono absolute left-3 top-3 text-sm select-none pointer-events-none" style={{ color: "var(--text-dim)" }}>{">"}</span>
-                    <textarea
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && userInput.trim() && !loading) {
-                          e.preventDefault();
-                          generate();
-                        }
-                      }}
-                      placeholder={currentPurpose.placeholder}
-                      rows={5}
-                      className="input-area"
-                    />
-                    <div className="flex justify-between items-center mt-1.5 px-1">
-                      <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>
-                        Ctrl+Enter로 생성
-                      </span>
-                      <span className="mono text-[11px]" style={{ color: userInput.length > 2000 ? "#ef4444" : "var(--text-dim)" }}>
-                        {userInput.length.toLocaleString()}자
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* File attachment */}
-                  <div className="mt-3">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept={ACCEPTED_EXTENSIONS}
-                      onChange={(e) => { handleFileSelect(e.target.files); e.target.value = ""; }}
-                      className="hidden"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                        onDragLeave={() => setDragOver(false)}
-                        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
-                        className={`file-drop-zone flex-1 ${dragOver ? "file-drop-zone-active" : ""}`}
-                      >
-                        <span style={{ color: "var(--text-dim)" }}>
-                          <span className="text-base mr-1.5">📎</span>
-                          <span className="sm:hidden">파일 첨부 (탭하여 선택)</span>
-                          <span className="hidden sm:inline">파일 첨부 (드래그 또는 클릭)</span>
-                        </span>
-                        <span className="text-xs block mt-1" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
-                          이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 4MB, {MAX_FILES}개)
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.createElement("input");
-                          input.type = "file";
-                          input.accept = "image/*";
-                          input.capture = "environment";
-                          input.onchange = () => handleFileSelect(input.files);
-                          input.click();
-                        }}
-                        className="file-camera-btn sm:hidden"
-                        title="카메라"
-                      >
-                        <span className="text-xl">📷</span>
-                        <span className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>촬영</span>
-                      </button>
-                    </div>
-
-                    {attachedFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {attachedFiles.map((f) => (
-                          <div key={f.id} className="file-chip fade-up">
-                            <span className="text-base">{getFileIcon(f.name)}</span>
-                            <span className="truncate max-w-[100px] sm:max-w-[120px] text-sm" style={{ color: "var(--text-secondary)" }}>{f.name}</span>
-                            <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>{formatFileSize(f.size)}</span>
-                            <button
-                              onClick={() => removeFile(f.id)}
-                              className="file-chip-remove"
-                              style={{ color: "var(--text-dim)" }}
-                            >
-                              ×
+                            <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{fav.purpose}</span>
+                            <span className="text-sm" style={{ color: "var(--text-dim)" }}>{new Date(fav.timestamp).toLocaleDateString("ko")}</span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => loadFavorite(fav)} className="btn-sm text-xs">불러오기</button>
+                            <button onClick={() => copyToClipboard(fav.result, `fav-${fav.id}`)} className="btn-sm text-xs">
+                              {copiedId === `fav-${fav.id}` ? "복사됨 ✓" : "복사"}
+                            </button>
+                            <button onClick={() => removeFavorite(fav.id)} className="btn-sm btn-danger text-xs">
+                              {confirmDeleteId === fav.id ? "확인?" : "삭제"}
                             </button>
                           </div>
-                        ))}
+                        </div>
+                        <p className="text-sm mb-2 truncate" style={{ color: "var(--text-dim)" }}>{fav.input}</p>
+                        <p className="text-base leading-relaxed line-clamp-4" style={{ color: "var(--text-secondary)" }}>{fav.result}</p>
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Options */}
-              {currentPurpose && (
-                <div className="card p-4 fade-up">
-                  <label className="label">추가 옵션</label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => toggleOption(opt.id)}
-                        className={`option-btn ${selectedOptions.includes(opt.id) ? "option-btn-active" : ""}`}
-                      >
-                        <span className={`mr-1.5 ${opt.id === "korean" || opt.id === "english" ? "mono text-xs font-semibold" : "text-base"}`}>{opt.emoji}</span>
-                        <span className="text-sm">{opt.label}</span>
-                      </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            ) : (
 
-              {/* Execute */}
-              {currentPurpose && (
-                <button
-                  onClick={generate}
-                  disabled={loading || !userInput.trim()}
-                  className={`execute-btn group ${loading || !userInput.trim() ? "execute-btn-disabled" : ""}`}
-                >
-                  <div className="execute-glow" />
-                  <div className="relative z-10 flex items-center justify-center gap-3">
-                    {loading ? (
-                      <>
-                        <span className="flex gap-1.5">
-                          {[0, 0.15, 0.3].map((d) => (
-                            <span key={d} className="w-2 h-2 rounded-full pulse-dot bg-white" style={{ animationDelay: `${d}s` }} />
-                          ))}
-                        </span>
-                        <span className="text-white/90">PROCESSING</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
-                          <polygon points="5 3 19 12 5 21 5 3"/>
-                        </svg>
-                        <span className="tracking-wider font-bold">GENERATE</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-40">
-                          <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                      </>
-                    )}
-                  </div>
-                </button>
-              )}
-            </div>
-
-            {/* RIGHT */}
-            <div ref={resultRef} className="lg:col-span-7 space-y-4">
-              {error && (
-                <div className="card card-error p-4 fade-up flex items-start justify-between gap-3">
-                  <p className="text-red-400 text-base">{error}</p>
-                  <button onClick={() => setError("")} className="text-red-400/60 hover:text-red-400 text-lg flex-shrink-0 leading-none mt-0.5">&times;</button>
-                </div>
-              )}
-
-              {/* Single result (streaming) */}
-              {result && !compareMode && (
-                <div className="card p-5 fade-up">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[model].badge}`}>
-                        {model.toUpperCase()}
-                      </span>
-                      <span className="text-sm" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
+            /* ═══ MAIN TAB ═══ */
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* LEFT */}
+                <div className="lg:col-span-5 space-y-5">
+                  {/* Model */}
+                  <div className="card p-4">
+                    <label className="label">모델 선택</label>
+                    <div className="flex gap-2 mt-2">
+                      {[
+                        { key: "claude" as Model, name: "Claude" },
+                        { key: "gemini" as Model, name: "Gemini" },
+                      ].map((m) => (
+                        <button
+                          key={m.key}
+                          onClick={() => { setModel(m.key); setCompareMode(false); }}
+                          className={`flex-1 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
+                            model === m.key && !compareMode
+                              ? MODEL_STYLES[m.key].active
+                              : "model-btn-inactive"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${model === m.key && !compareMode ? MODEL_STYLES[m.key].dot : ""}`} style={{ background: model === m.key && !compareMode ? undefined : "var(--text-dim)" }} />
+                          {m.name}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setCompareMode(!compareMode)}
+                        className={`px-5 py-3 rounded-lg text-[17px] font-medium transition-all flex items-center justify-center gap-2 ${
+                          compareMode ? MODEL_STYLES.purple.active : "model-btn-inactive"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${compareMode ? MODEL_STYLES.purple.dot : ""}`} style={{ background: compareMode ? undefined : "var(--text-dim)" }} />
+                        비교
+                      </button>
                     </div>
-                    <button
-                      onClick={() => { setResult(""); setMeta(null); }}
-                      className="text-xs px-2 py-1 rounded-md hover:bg-[var(--bg-input)] transition-colors"
-                      style={{ color: "var(--text-dim)" }}
-                    >
-                      초기화
-                    </button>
+                    {compareMode && <p className="text-xs text-purple-400/70 mt-2 fade-up">Claude와 Gemini 결과를 동시에 비교합니다</p>}
                   </div>
-                  <div className="result-box max-h-[600px] overflow-y-auto">
-                    <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
-                      {result}{loading && <span className="cursor-blink" />}
+
+                  {/* Purpose */}
+                  <div className="card p-4">
+                    <label className="label">사용 목적</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-2.5 mt-2">
+                      {PURPOSES.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedPurpose(p.id)}
+                          className={`purpose-btn ${selectedPurpose === p.id ? "purpose-btn-active" : ""}`}
+                        >
+                          <span className="text-lg mr-1.5">{p.emoji}</span>
+                          <span className="text-base">{p.label}</span>
+                          {selectedPurpose === p.id && <span className="absolute top-1.5 right-2 text-xs" style={{ color: "var(--accent)" }}>✓</span>}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  {!loading && <ResultActions text={result} mdl={model} copyKey="single" />}
-                  {!loading && meta && <MetaInfo meta={meta} />}
-                </div>
-              )}
 
-              {/* Compare results (streaming) */}
-              {compareMode && (compareResult.claude || compareResult.gemini) && (
-                <div className="space-y-4 fade-up">
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => { setCompareResult({ claude: "", gemini: "" }); setCompareMeta({ claude: null, gemini: null }); }}
-                      className="text-xs px-2 py-1 rounded-md hover:bg-[var(--bg-input)] transition-colors"
-                      style={{ color: "var(--text-dim)" }}
-                    >
-                      초기화
-                    </button>
-                  </div>
-                  {[
-                    { key: "claude" as const, label: "CLAUDE" },
-                    { key: "gemini" as const, label: "GEMINI" },
-                  ].map((m) => (
-                    <div key={m.key} className="card p-5">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[m.key].badge}`}>{m.label}</span>
-                        {loading && !compareResult[m.key] && (
-                          <span className="text-sm" style={{ color: "var(--text-dim)" }}>연결 중...</span>
-                        )}
+                  {/* Input */}
+                  {currentPurpose && (
+                    <div className="card p-4 fade-up">
+                      <label className="label">세부 조건</label>
+                      <div className="relative mt-2">
+                        <span className="mono absolute left-3 top-3 text-sm select-none pointer-events-none" style={{ color: "var(--text-dim)" }}>{">"}</span>
+                        <textarea
+                          value={userInput}
+                          onChange={(e) => setUserInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && userInput.trim() && !loading) {
+                              e.preventDefault();
+                              generate();
+                            }
+                          }}
+                          placeholder={currentPurpose.placeholder}
+                          rows={5}
+                          className="input-area"
+                        />
+                        <div className="flex justify-between items-center mt-1.5 px-1">
+                          <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>
+                            Ctrl+Enter로 생성
+                          </span>
+                          <span className="mono text-[11px]" style={{ color: userInput.length > 2000 ? "#ef4444" : "var(--text-dim)" }}>
+                            {userInput.length.toLocaleString()}자
+                          </span>
+                        </div>
                       </div>
-                      {compareResult[m.key] ? (
-                        <>
-                          <div className="result-box max-h-80 overflow-y-auto">
-                            <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
-                              {compareResult[m.key]}{loading && !compareMeta[m.key] && <span className="cursor-blink" />}
-                            </div>
-                          </div>
-                          {!loading && <ResultActions text={compareResult[m.key]} mdl={m.key} copyKey={m.key} />}
-                          {compareMeta[m.key] && <MetaInfo meta={compareMeta[m.key]!} />}
-                        </>
-                      ) : loading ? (
-                        <div className="result-box flex items-center justify-center py-8">
-                          <div className="flex gap-1.5">
-                            {[0, 0.15, 0.3].map((d) => (
-                              <span key={d} className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
+
+                      {/* File attachment */}
+                      <div className="mt-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept={ACCEPTED_EXTENSIONS}
+                          onChange={(e) => { handleFileSelect(e.target.files); e.target.value = ""; }}
+                          className="hidden"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
+                            className={`file-drop-zone flex-1 ${dragOver ? "file-drop-zone-active" : ""}`}
+                          >
+                            <span style={{ color: "var(--text-dim)" }}>
+                              <span className="text-base mr-1.5">📎</span>
+                              <span className="sm:hidden">파일 첨부 (탭하여 선택)</span>
+                              <span className="hidden sm:inline">파일 첨부 (드래그 또는 클릭)</span>
+                            </span>
+                            <span className="text-xs block mt-1" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
+                              이미지 · PDF · 엑셀 · 워드 · 텍스트 (최대 4MB, {MAX_FILES}개)
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.capture = "environment";
+                              input.onchange = () => handleFileSelect(input.files);
+                              input.click();
+                            }}
+                            className="file-camera-btn sm:hidden"
+                            title="카메라"
+                          >
+                            <span className="text-xl">📷</span>
+                            <span className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>촬영</span>
+                          </button>
+                        </div>
+
+                        {attachedFiles.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {attachedFiles.map((f) => (
+                              <div key={f.id} className="file-chip fade-up">
+                                <span className="text-base">{getFileIcon(f.name)}</span>
+                                <span className="truncate max-w-[100px] sm:max-w-[120px] text-sm" style={{ color: "var(--text-secondary)" }}>{f.name}</span>
+                                <span className="mono text-[11px]" style={{ color: "var(--text-dim)" }}>{formatFileSize(f.size)}</span>
+                                <button
+                                  onClick={() => removeFile(f.id)}
+                                  className="file-chip-remove"
+                                  style={{ color: "var(--text-dim)" }}
+                                >
+                                  ×
+                                </button>
+                              </div>
                             ))}
                           </div>
-                        </div>
-                      ) : null}
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
 
-              {/* Empty state */}
-              {!hasAnyResult && !error && !loading && (
-                <div className="card p-12 flex flex-col items-center justify-center min-h-[400px] text-center">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--bg-input)", border: "1px solid var(--border)" }}>
-                    <span className="text-2xl" style={{ color: "var(--accent)" }}>⟩</span>
-                  </div>
-                  <p className="text-base" style={{ color: "var(--text-secondary)" }}>결과가 여기에 표시됩니다</p>
-                  <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>모델과 목적을 선택한 후 실행하세요</p>
-                </div>
-              )}
+                  {/* Options */}
+                  {currentPurpose && (
+                    <div className="card p-4 fade-up">
+                      <label className="label">추가 옵션</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => toggleOption(opt.id)}
+                            className={`option-btn ${selectedOptions.includes(opt.id) ? "option-btn-active" : ""}`}
+                          >
+                            <span className={`mr-1.5 ${opt.id === "korean" || opt.id === "english" ? "mono text-xs font-semibold" : "text-base"}`}>{opt.emoji}</span>
+                            <span className="text-sm">{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Loading (before first text arrives) */}
-              {loading && !hasAnyResult && !error && (
-                <div className="card p-12 flex flex-col items-center justify-center min-h-[400px] shimmer">
-                  <div className="flex gap-2 mb-4">
-                    {[0, 0.2, 0.4].map((d) => (
-                      <span key={d} className="w-2 h-2 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
-                    ))}
-                  </div>
-                  <p className="text-base" style={{ color: "var(--text-secondary)" }}>
-                    {compareMode ? "Claude & Gemini 동시 생성 중" : `${model === "claude" ? "Claude" : "Gemini"} 생성 중`}
-                  </p>
+                  {/* Execute */}
+                  {currentPurpose && (
+                    <button
+                      onClick={generate}
+                      disabled={loading || !userInput.trim()}
+                      className={`execute-btn group ${loading || !userInput.trim() ? "execute-btn-disabled" : ""}`}
+                    >
+                      <div className="execute-glow" />
+                      <div className="relative z-10 flex items-center justify-center gap-3">
+                        {loading ? (
+                          <>
+                            <span className="flex gap-1.5">
+                              {[0, 0.15, 0.3].map((d) => (
+                                <span key={d} className="w-2 h-2 rounded-full pulse-dot bg-white" style={{ animationDelay: `${d}s` }} />
+                              ))}
+                            </span>
+                            <span className="text-white/90">PROCESSING</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+                              <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            <span className="tracking-wider font-bold">GENERATE</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-40">
+                              <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                          </>
+                        )}
+                      </div>
+                    </button>
+                  )}
                 </div>
-              )}
+
+                {/* RIGHT */}
+                <div ref={resultRef} className="lg:col-span-7 space-y-4">
+                  {error && (
+                    <div className="card card-error p-4 fade-up flex items-start justify-between gap-3">
+                      <p className="text-red-400 text-base">{error}</p>
+                      <button onClick={() => setError("")} className="text-red-400/60 hover:text-red-400 text-lg flex-shrink-0 leading-none mt-0.5">&times;</button>
+                    </div>
+                  )}
+
+                  {/* Single result */}
+                  {result && !compareMode && (
+                    <div className="card p-5 fade-up">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[model].badge}`}>
+                            {model.toUpperCase()}
+                          </span>
+                          <span className="text-sm" style={{ color: "var(--text-dim)" }}>{currentPurpose?.label}</span>
+                        </div>
+                        <button
+                          onClick={() => { setResult(""); setMeta(null); }}
+                          className="text-xs px-2 py-1 rounded-md hover:bg-[var(--bg-input)] transition-colors"
+                          style={{ color: "var(--text-dim)" }}
+                        >
+                          초기화
+                        </button>
+                      </div>
+                      <div className="result-box max-h-[600px] overflow-y-auto">
+                        <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                          {result}{loading && <span className="cursor-blink" />}
+                        </div>
+                      </div>
+                      {!loading && <ResultActions text={result} mdl={model} copyKey="single" />}
+                      {!loading && meta && <MetaInfo meta={meta} />}
+                    </div>
+                  )}
+
+                  {/* Compare results */}
+                  {compareMode && (compareResult.claude || compareResult.gemini) && (
+                    <div className="space-y-4 fade-up">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => { setCompareResult({ claude: "", gemini: "" }); setCompareMeta({ claude: null, gemini: null }); }}
+                          className="text-xs px-2 py-1 rounded-md hover:bg-[var(--bg-input)] transition-colors"
+                          style={{ color: "var(--text-dim)" }}
+                        >
+                          초기화
+                        </button>
+                      </div>
+                      {[
+                        { key: "claude" as const, label: "CLAUDE" },
+                        { key: "gemini" as const, label: "GEMINI" },
+                      ].map((m) => (
+                        <div key={m.key} className="card p-5">
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className={`mono text-[11px] px-2 py-0.5 rounded font-medium ${MODEL_STYLES[m.key].badge}`}>{m.label}</span>
+                            {loading && !compareResult[m.key] && (
+                              <span className="text-sm" style={{ color: "var(--text-dim)" }}>연결 중...</span>
+                            )}
+                          </div>
+                          {compareResult[m.key] ? (
+                            <>
+                              <div className="result-box max-h-80 overflow-y-auto">
+                                <div className="text-base whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text)" }}>
+                                  {compareResult[m.key]}{loading && !compareMeta[m.key] && <span className="cursor-blink" />}
+                                </div>
+                              </div>
+                              {!loading && <ResultActions text={compareResult[m.key]} mdl={m.key} copyKey={m.key} />}
+                              {compareMeta[m.key] && <MetaInfo meta={compareMeta[m.key]!} />}
+                            </>
+                          ) : loading ? (
+                            <div className="result-box flex items-center justify-center py-8">
+                              <div className="flex gap-1.5">
+                                {[0, 0.15, 0.3].map((d) => (
+                                  <span key={d} className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Empty state */}
+                  {!hasAnyResult && !error && !loading && (
+                    <div className="card p-12 flex flex-col items-center justify-center min-h-[400px] text-center">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--bg-input)", border: "1px solid var(--border)" }}>
+                        <span className="text-2xl" style={{ color: "var(--accent)" }}>⟩</span>
+                      </div>
+                      <p className="text-base" style={{ color: "var(--text-secondary)" }}>결과가 여기에 표시됩니다</p>
+                      <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>모델과 목적을 선택한 후 실행하세요</p>
+                    </div>
+                  )}
+
+                  {/* Loading */}
+                  {loading && !hasAnyResult && !error && (
+                    <div className="card p-12 flex flex-col items-center justify-center min-h-[400px] shimmer">
+                      <div className="flex gap-2 mb-4">
+                        {[0, 0.2, 0.4].map((d) => (
+                          <span key={d} className="w-2 h-2 rounded-full pulse-dot" style={{ background: "var(--accent)", animationDelay: `${d}s` }} />
+                        ))}
+                      </div>
+                      <p className="text-base" style={{ color: "var(--text-secondary)" }}>
+                        {compareMode ? "Claude & Gemini 동시 생성 중" : `${model === "claude" ? "Claude" : "Gemini"} 생성 중`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+            )}
+
+            <div className="mt-12 pb-8 text-center">
+              <p className="mono text-xs tracking-wider" style={{ color: "var(--text-dim)" }}>
+                PROMPT_GENERATOR v1.0 — {new Date().getFullYear()}
+              </p>
             </div>
           </div>
 
-        </div>
-        )}
-
-        <div className="mt-12 pb-8 text-center">
-          <p className="mono text-xs tracking-wider" style={{ color: "var(--text-dim)" }}>
-            PROMPT_GENERATOR v1.0 — {new Date().getFullYear()}
-          </p>
-        </div>
-      </div>
-
-      {savedToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium fade-up"
-          style={{ background: "var(--accent)", color: "#000" }}>
-          즐겨찾기에 저장됨
-        </div>
+          {savedToast && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium fade-up"
+              style={{ background: "var(--accent)", color: "#000" }}>
+              즐겨찾기에 저장됨
+            </div>
+          )}
+        </>
       )}
 
       <style jsx global>{`
